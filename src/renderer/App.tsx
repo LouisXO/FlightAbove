@@ -1,5 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import SettingsPanel from './components/SettingsPanel';
+
+// TypeScript interface declarations
+declare global {
+  interface Window {
+    electronAPI: {
+      getFlightData: () => Promise<FlightData[]>;
+      getCurrentLocation: () => Promise<Location>;
+      getSettings: () => Promise<any>;
+      setSettings: (settings: any) => Promise<void>;
+      onFlightDataUpdate: (callback: (data: FlightData[]) => void) => void;
+      onLocationUpdate: (callback: (location: Location) => void) => void;
+      on: (channel: string, callback: (...args: any[]) => void) => void;
+      removeAllListeners: (channel: string) => void;
+      openExternal: (url: string) => Promise<void>;
+      getAppVersion: () => Promise<string>;
+      setFlightRadar24ApiKey: (apiKey: string) => Promise<{ success: boolean }>;
+      getFlightRadar24ApiKey: () => Promise<string | null>;
+      hasFlightRadar24ApiKey: () => Promise<boolean>;
+      removeFlightRadar24ApiKey: () => Promise<{ success: boolean }>;
+      getAllApiKeys: () => Promise<{ flightRadar24: boolean; openSkyNetwork: boolean }>;
+      getAirlineLogo: (airlineCode: string) => Promise<string | null>;
+    };
+  }
+}
 
 interface FlightData {
   callsign: string;
@@ -16,6 +41,13 @@ interface FlightData {
   status: 'On Time' | 'Delayed' | 'Cancelled' | 'Unknown';
   estimatedArrival: string;
   flightRadarUrl?: string;
+  distance?: number;
+  airlineCode?: string;
+  registration?: string;
+  aircraftType?: string;
+  originIATA?: string;
+  destinationIATA?: string;
+  eta?: string;
 }
 
 interface Location {
@@ -24,12 +56,66 @@ interface Location {
   accuracy: number;
 }
 
+// AirlineLogo component with async logo fetching
+interface AirlineLogoProps {
+  airlineCode?: string;
+  airlineName: string;
+}
+
+const AirlineLogo: React.FC<AirlineLogoProps> = ({ airlineCode, airlineName }) => {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      if (!airlineCode) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const url = await window.electronAPI?.getAirlineLogo(airlineCode);
+        setLogoUrl(url);
+      } catch (error) {
+        console.error('Error fetching airline logo:', error);
+        setLogoUrl(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLogo();
+  }, [airlineCode]);
+
+  if (isLoading) {
+    return <div className="airline-logo-placeholder">⏳</div>;
+  }
+
+  if (!logoUrl) {
+    return null;
+  }
+
+  return (
+    <img 
+      src={logoUrl} 
+      alt={`${airlineName} logo`}
+      className="airline-logo"
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+};
+
 const App: React.FC = () => {
-  const [flightData, setFlightData] = useState<FlightData | null>(null);
+  const [flightData, setFlightData] = useState<FlightData[]>([]);
   const [location, setLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedFlightIndex, setSelectedFlightIndex] = useState(0);
 
   useEffect(() => {
     // Initialize app
@@ -37,15 +123,21 @@ const App: React.FC = () => {
 
     // Set up event listeners
     if (window.electronAPI) {
-      window.electronAPI.onFlightDataUpdate((data: FlightData) => {
-        setFlightData(data);
+      window.electronAPI.onFlightDataUpdate((data: FlightData[]) => {
+        setFlightData(data || []);
         setLastUpdate(new Date());
         setLoading(false);
         setError(null);
+        setSelectedFlightIndex(0); // Reset to first flight
       });
 
       window.electronAPI.onLocationUpdate((loc: Location) => {
         setLocation(loc);
+      });
+
+      // Listen for show-settings message from main process
+      window.electronAPI.on('show-settings', () => {
+        setShowSettings(true);
       });
     }
 
@@ -68,7 +160,7 @@ const App: React.FC = () => {
       
       // Get initial flight data
       const initialFlightData = await window.electronAPI?.getFlightData();
-      setFlightData(initialFlightData);
+      setFlightData(initialFlightData || []);
       
       setLastUpdate(new Date());
       setLoading(false);
@@ -76,12 +168,6 @@ const App: React.FC = () => {
       setError('Failed to initialize app');
       setLoading(false);
       console.error('App initialization error:', err);
-    }
-  };
-
-  const handleFlightClick = () => {
-    if (flightData?.flightRadarUrl) {
-      window.electronAPI?.openExternal(flightData.flightRadarUrl);
     }
   };
 
@@ -104,11 +190,21 @@ const App: React.FC = () => {
     }
   };
 
+
+
+  const handleFlightNavigation = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setSelectedFlightIndex(prev => prev > 0 ? prev - 1 : flightData.length - 1);
+    } else {
+      setSelectedFlightIndex(prev => prev < flightData.length - 1 ? prev + 1 : 0);
+    }
+  };
+
   if (loading) {
     return (
       <div className="app loading">
         <div className="loading-spinner"></div>
-        <p>Searching for flights overhead...</p>
+        <p>Searching for flights nearby...</p>
       </div>
     );
   }
@@ -125,58 +221,145 @@ const App: React.FC = () => {
     );
   }
 
-  if (!flightData) {
+  if (!flightData || flightData.length === 0) {
     return (
       <div className="app no-flights">
-        <div className="no-flights-icon">🛩️</div>
-        <p>No flights overhead</p>
-        <small className="last-update">{formatLastUpdate()}</small>
+        <div className="no-flights-content">
+          <div className="no-flights-icon">🛩️</div>
+          <p>No flights nearby</p>
+          <small className="last-update">{formatLastUpdate()}</small>
+        </div>
+        
+        <div className="app-footer">
+          <div className="footer-actions">
+            <button 
+              className="settings-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSettings(true);
+              }}
+              title="Settings"
+            >
+              ⚙️
+            </button>
+            <small className="app-info">FlightAbove</small>
+          </div>
+        </div>
+        
+        {showSettings && (
+          <SettingsPanel onClose={() => setShowSettings(false)} />
+        )}
       </div>
     );
   }
 
+  const currentFlight = flightData[selectedFlightIndex];
+
   return (
     <div className="app">
-      <div className="flight-info" onClick={handleFlightClick}>
+      {/* Flight Navigation */}
+      {flightData.length > 1 && (
+        <div className="flight-navigation">
+          <button 
+            onClick={() => handleFlightNavigation('prev')}
+            className="nav-button"
+            aria-label="Previous flight"
+          >
+            ←
+          </button>
+          <span className="flight-counter">
+            {selectedFlightIndex + 1} of {flightData.length}
+          </span>
+          <button 
+            onClick={() => handleFlightNavigation('next')}
+            className="nav-button"
+            aria-label="Next flight"
+          >
+            →
+          </button>
+        </div>
+      )}
+
+      <div className="flight-info">
         <div className="flight-header">
           <div className="airline-info">
-            <span className="airline-name">{flightData.airline}</span>
-            <span className="flight-number">{flightData.flightNumber}</span>
+            <AirlineLogo 
+              airlineCode={currentFlight.airlineCode}
+              airlineName={currentFlight.airline}
+            />
+            <div className="airline-text">
+              <span className="airline-name">{currentFlight.airline}</span>
+              <span className="flight-number">{currentFlight.flightNumber}</span>
+            </div>
           </div>
           <div 
             className="flight-status"
-            style={{ color: getStatusColor(flightData.status) }}
+            style={{ color: getStatusColor(currentFlight.status) }}
           >
-            {flightData.status}
+            {currentFlight.status}
           </div>
         </div>
         
         <div className="flight-route">
-          <span className="airport origin">{flightData.origin}</span>
+          <span className="airport origin">{currentFlight.originIATA || currentFlight.origin}</span>
           <span className="route-arrow">→</span>
-          <span className="airport destination">{flightData.destination}</span>
+          <span className="airport destination">{currentFlight.destinationIATA || currentFlight.destination}</span>
         </div>
         
         <div className="flight-details">
           <div className="detail-item">
+            <span className="detail-label">Distance:</span>
+            <span className="detail-value">
+              {currentFlight.distance ? `${currentFlight.distance.toFixed(1)}km` : 'Unknown'}
+            </span>
+          </div>
+          <div className="detail-item">
             <span className="detail-label">Altitude:</span>
-            <span className="detail-value">{flightData.altitude.toLocaleString()}ft</span>
+            <span className="detail-value">{currentFlight.altitude.toLocaleString()}ft</span>
           </div>
           <div className="detail-item">
             <span className="detail-label">Speed:</span>
-            <span className="detail-value">{flightData.speed} mph</span>
+            <span className="detail-value">{currentFlight.speed} mph</span>
           </div>
           <div className="detail-item">
             <span className="detail-label">Aircraft:</span>
-            <span className="detail-value">{flightData.aircraft}</span>
+            <span className="detail-value">{currentFlight.aircraftType || currentFlight.aircraft}</span>
           </div>
+          {currentFlight.registration && (
+            <div className="detail-item">
+              <span className="detail-label">Registration:</span>
+              <span className="detail-value">{currentFlight.registration}</span>
+            </div>
+          )}
+          {currentFlight.eta && (
+            <div className="detail-item">
+              <span className="detail-label">ETA:</span>
+              <span className="detail-value">{currentFlight.eta}</span>
+            </div>
+          )}
         </div>
       </div>
       
       <div className="app-footer">
         <small className="last-update">{formatLastUpdate()}</small>
-        <small className="click-hint">Click for details</small>
+        <div className="footer-actions">
+          <button 
+            className="settings-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSettings(true);
+            }}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+          <small className="app-info">FlightAbove</small>
+        </div>
       </div>
+      
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 };
