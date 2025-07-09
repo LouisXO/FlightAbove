@@ -1,6 +1,7 @@
 import { app } from 'electron';
 
-export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+// Check if we're running from the development server or built files
+export const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_IS_DEV === 'true';
 
 export const isProduction = !isDev;
 
