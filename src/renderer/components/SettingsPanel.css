@@ -407,6 +407,28 @@
   color: #b7791f;
 }
 
+.usage-warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 6px;
+  color: #c53030;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.usage-info {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #4a5568;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .instructions {
   margin: 12px 0;
   padding-left: 16px;
@@ -548,4 +570,131 @@
 .demo-mode-info small {
   color: #3b82f6;
   font-size: 12px;
+}
+
+/* Visibility Section Styles */
+.visibility-section {
+  margin-bottom: 20px;
+}
+
+.visibility-section:last-child {
+  margin-bottom: 0;
+}
+
+.visibility-header {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visibility-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.visibility-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  border: 1px solid #9ae6b4;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.visibility-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(56, 161, 105, 0.15);
+}
+
+.visibility-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #9ae6b4;
+}
+
+.visibility-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.visibility-content h5 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.visibility-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #4a5568;
+  line-height: 1.4;
+}
+
+.visibility-ranges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.range-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.range-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(113, 128, 150, 0.15);
+}
+
+.range-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.range-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.range-distance {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4299e1;
+  margin-bottom: 2px;
+}
+
+.range-description {
+  font-size: 12px;
+  color: #718096;
+  line-height: 1.4;
 }

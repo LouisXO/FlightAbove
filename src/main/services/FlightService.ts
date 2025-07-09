@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { FlightRadar24API } from 'flightradarapi';
 import { ApiKeyManager } from './ApiKeyManager';
 
 export interface FlightData {
@@ -30,15 +30,15 @@ export interface CreditUsage {
   flightsReturned: number;
   endpoint: string;
   timestamp: number;
-  estimatedCost: number; // Estimated cost in USD (assuming $0.0003 per credit)
+  estimatedCost: number; // No longer relevant with unofficial API
 }
 
 export interface FlightServiceSettings {
   refreshIntervalMinutes: number; // Default: 30 minutes
-  maxFlightsPerRequest: number;   // Default: 1 flight
+  maxFlightsPerRequest: number;   // Default: 10 flights
   radiusKm: number;              // Default: 20km
   useFullEndpoint: boolean;       // Default: true (use full endpoint)
-  demoMode: boolean;             // Default: false (enables demo mode without API key)
+  demoMode: boolean;             // Default: false (enables demo mode)
 }
 
 export interface Location {
@@ -48,7 +48,7 @@ export interface Location {
 }
 
 export interface ApiError {
-  type: 'payment_required' | 'invalid_key' | 'rate_limit' | 'network' | 'other';
+  type: 'rate_limit' | 'network' | 'parsing' | 'other';
   message: string;
   timestamp: number;
   statusCode?: number;
@@ -57,14 +57,15 @@ export interface ApiError {
 
 export class FlightService {
   private static instance: FlightService;
-  private lastFlightData: FlightData[] = []; // Changed to array
+  private lastFlightData: FlightData[] = [];
   private apiKeyManager: ApiKeyManager;
   private creditUsageHistory: CreditUsage[] = [];
   private lastApiError: ApiError | null = null;
+  private flightRadarAPI: FlightRadar24API;
   private settings: FlightServiceSettings = {
-    refreshIntervalMinutes: 30,  // 1 minute for frequent updates
-    maxFlightsPerRequest: 1,    // Limit to 3 flights per request
-    radiusKm: 20,              // 50km radius
+    refreshIntervalMinutes: 5,   // More frequent updates since no API cost
+    maxFlightsPerRequest: 10,    // More flights since no cost constraints  
+    radiusKm: 15,              // Realistic radius for visible aircraft (15km)
     useFullEndpoint: true,     // Use full endpoint for complete data
     demoMode: false           // Demo mode disabled by default
   };
@@ -125,6 +126,7 @@ export class FlightService {
 
   private constructor() {
     this.apiKeyManager = ApiKeyManager.getInstance();
+    this.flightRadarAPI = new FlightRadar24API();
   }
 
   public async getFlightData(location: Location): Promise<FlightData[]> {
@@ -139,12 +141,6 @@ export class FlightService {
         return demoFlightData;
       }
 
-      // Check if we have an API key for real data
-      if (!this.apiKeyManager.hasFlightRadar24ApiKey()) {
-        // Don't spam the console when no API key is configured
-        return [];
-      }
-
       console.log('Attempting to fetch real flight data from FlightRadar24...');
       const realFlightData = await this.getFlightDataFromFlightRadar24(location);
       if (realFlightData && realFlightData.length > 0) {
@@ -152,9 +148,11 @@ export class FlightService {
         return realFlightData;
       }
       console.log('No real flights found nearby');
+      this.lastFlightData = []; // Update lastFlightData to empty array when no flights found
       return [];
     } catch (error) {
       console.error('Error fetching flight data:', error);
+      this.lastFlightData = []; // Clear lastFlightData on error
       return [];
     }
   }
@@ -257,137 +255,115 @@ export class FlightService {
 
   private async getFlightDataFromFlightRadar24(location: Location): Promise<FlightData[]> {
     try {
-      const apiKey = this.apiKeyManager.getFlightRadar24ApiKey();
-      if (!apiKey) {
-        throw new Error('No FlightRadar24 API key available');
-      }
-
-      // Choose endpoint based on settings (light saves credits: 6 vs 8 per flight)
-      const endpoint = this.settings.useFullEndpoint 
-        ? 'https://fr24api.flightradar24.com/api/live/flight-positions/full'
-        : 'https://fr24api.flightradar24.com/api/live/flight-positions/light';
+      console.log('Fetching flight data using unofficial FlightRadar24 API...');
       
-      // Calculate bounds based on settings radius
-      const latitudeDegreePerKm = 1 / 111; // Approximate conversion
-      const longitudeDegreePerKm = 1 / (111 * Math.cos(location.latitude * Math.PI / 180));
-      const radiusDegrees = this.settings.radiusKm * Math.max(latitudeDegreePerKm, longitudeDegreePerKm);
-
-      const response = await axios.get(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json',
-          'Accept-Version': 'v1'
-        },
-        params: {
-          // Create bounding box based on configured radius
-          bounds: `${location.latitude + radiusDegrees},${location.latitude - radiusDegrees},${location.longitude - radiusDegrees},${location.longitude + radiusDegrees}`,
-          // Limit results to save credits
-          limit: this.settings.maxFlightsPerRequest
-        },
-        timeout: 10000 // 10 second timeout
-      });
-
-      console.log('FlightRadar24 API response received');
-      
-      // Clear any previous API errors on successful response
+      // Clear any previous API errors
       this.lastApiError = null;
       
-      if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        // FlightRadar24 live flight positions API returns an array of flights
-        const flights = response.data.data;
+      // Use getBoundsByPoint to get bounds for the area (radius in meters)
+      const radiusMeters = this.settings.radiusKm * 1000;
+      const bounds = this.flightRadarAPI.getBoundsByPoint(
+        location.latitude,
+        location.longitude,
+        radiusMeters
+      );
+      
+      console.log(`Search bounds: ${bounds} (radius: ${this.settings.radiusKm}km)`);
+      
+      // Get flights in the area
+      const flights = await this.flightRadarAPI.getFlights(null, bounds);
+
+      console.log(`Found ${flights.length} flights in the area`);
+      
+      // Track "credit usage" for consistency (though no actual credits are used)
+      this.trackCreditUsage(flights.length, this.settings.useFullEndpoint ? 'full' : 'light');
+      
+      if (flights.length > 0) {
+        // Sort flights by distance from location
+        const flightsWithDistance = flights.map(flight => {
+          const distance = this.calculateDistance(
+            location.latitude,
+            location.longitude,
+            flight.latitude || 0,
+            flight.longitude || 0
+          );
+          return { ...flight, distance };
+        }).sort((a, b) => a.distance - b.distance);
         
-        console.log(`Found ${flights.length} flights in the area`);
+        // Limit results based on settings
+        const limitedFlights = flightsWithDistance.slice(0, this.settings.maxFlightsPerRequest);
         
-        // Track credit usage
-        this.trackCreditUsage(flights.length, this.settings.useFullEndpoint ? 'full' : 'light');
+        // console.log('=== RAW FLIGHT DATA FROM API ===');
+        // limitedFlights.forEach((flight, index) => {
+        //   console.log(`Flight ${index + 1} Raw Data:`, JSON.stringify(flight, null, 2));
+        // });
         
-        if (flights.length > 0) {
-          // Find all nearby flights and sort by distance
-          const nearbyFlights = this.findNearbyFlights(flights, location, this.settings.radiusKm);
-          console.log(`Filtered ${nearbyFlights.length} nearby flights from ${flights.length} total`);
-          
-          if (nearbyFlights.length > 0) {
-            const flightDataArray = nearbyFlights.map(flight => this.parseFlightRadar24LightData(flight));
-            console.log(`Parsed ${flightDataArray.length} flight data objects`);
-            return flightDataArray;
-          }
-        }
-      } else {
-        console.log('Unexpected API response format:', response.data);
+        // Fetch detailed information for each flight
+        // console.log('\n=== FETCHING DETAILED FLIGHT INFO ===');
+        const flightsWithDetails = await Promise.all(
+          limitedFlights.map(async (flight, index) => {
+            try {
+              // console.log(`Fetching details for flight ${index + 1}: ${flight.callsign || flight.id}`);
+              
+              // Use the flight object directly as per API documentation
+              const flightDetails = await this.flightRadarAPI.getFlightDetails(flight as any);
+              
+              // Create a copy without the trail data for cleaner logging
+              const flightDetailsForLogging = { ...flightDetails };
+              if ('trail' in flightDetailsForLogging) {
+                delete (flightDetailsForLogging as any).trail;
+              }
+              // console.log(`Flight ${index + 1} Details:`, JSON.stringify(flightDetailsForLogging, null, 2));
+              
+              // Merge flight details with original flight data
+              const enhancedFlight = { ...flight, ...flightDetails };
+              
+              // Log enhanced flight without trail data
+              const enhancedFlightForLogging = { ...enhancedFlight };
+              if ('trail' in enhancedFlightForLogging) {
+                delete (enhancedFlightForLogging as any).trail;
+              }
+              // console.log(`Flight ${index + 1} Enhanced:`, JSON.stringify(enhancedFlightForLogging, null, 2));
+              return enhancedFlight;
+            } catch (error) {
+              console.error(`Error fetching details for flight ${flight.callsign || flight.id}:`, error);
+              return flight; // Return original flight if details fetch fails
+            }
+          })
+        );
+        
+        const flightDataArray = flightsWithDetails.map(flight => this.parseUnofficalAPIData(flight));
+        console.log(`Parsed ${flightDataArray.length} flight data objects`);
+        return flightDataArray;
       }
 
       return [];
     } catch (error) {
-      // console.error('FlightRadar24 API error:', error);
+      console.error('FlightRadar24 API error:', error);
       
-      // Check if it's an axios error with response
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const statusText = error.response?.statusText;
-        const responseData = error.response?.data;
-        
-        console.error(`FlightRadar24 API HTTP Error: ${status} ${statusText}`);
-        
-        if (status === 401) {
-          this.lastApiError = {
-            type: 'invalid_key',
-            message: 'Invalid API key',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: 'Your FlightRadar24 API key is invalid or expired. Please check your API key in settings.'
-          };
-        } else if (status === 402) {
-          this.lastApiError = {
-            type: 'payment_required',
-            message: 'Credit limit reached',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: responseData?.details || 'Your FlightRadar24 subscription has run out of credits. Please top up your account or upgrade your plan.'
-          };
-        } else if (status === 403) {
-          this.lastApiError = {
-            type: 'invalid_key',
-            message: 'Access forbidden',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: 'Your API key does not have permission for this endpoint.'
-          };
-        } else if (status === 404) {
-          this.lastApiError = {
-            type: 'other',
-            message: 'Endpoint not found',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: 'The FlightRadar24 API endpoint was not found. The API URL may be incorrect.'
-          };
-        } else if (status === 429) {
-          this.lastApiError = {
-            type: 'rate_limit',
-            message: 'Rate limit exceeded',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: 'Too many requests. Please wait a moment before trying again.'
-          };
-        } else {
-          this.lastApiError = {
-            type: 'other',
-            message: 'API error',
-            timestamp: Date.now(),
-            statusCode: status,
-            details: statusText || 'An unexpected error occurred with the FlightRadar24 API.'
-          };
-        }
-        
-        // Log response data for debugging
-        if (error.response?.data) {
-          console.error('API Response:', error.response.data);
-        }
-      } else {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Handle different types of errors
+      if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+        this.lastApiError = {
+          type: 'rate_limit',
+          message: 'Rate limit exceeded',
+          timestamp: Date.now(),
+          details: 'Too many requests. Please wait a moment before trying again.'
+        };
+      } else if (errorMessage.includes('network') || errorMessage.includes('ENOTFOUND')) {
         this.lastApiError = {
           type: 'network',
           message: 'Network error',
           timestamp: Date.now(),
-          details: 'Unable to connect to FlightRadar24 API. Please check your internet connection.'
+          details: 'Unable to connect to FlightRadar24. Please check your internet connection.'
+        };
+      } else {
+        this.lastApiError = {
+          type: 'other',
+          message: 'API error',
+          timestamp: Date.now(),
+          details: errorMessage
         };
       }
       
@@ -615,6 +591,104 @@ export class FlightService {
     };
   }
 
+  private parseUnofficalAPIData(flight: any): FlightData {
+    // Parse data from the unofficial FlightRadar24 API (potentially enhanced with getFlightDetails)
+    const callsign = flight.callsign || 'Unknown';
+    const airlineCode = this.extractAirlineCodeFromCallsign(callsign);
+    
+    // Convert speed from knots to mph for consistency
+    const speedMph = flight.groundSpeed ? Math.round(flight.groundSpeed * 1.15078) : 0;
+    
+    // Extract detailed airport information from getFlightDetails response
+    const originName = flight.airport?.origin?.name || 
+                      flight.originAirportName || 
+                      flight.originAirportIata || 
+                      'Unknown';
+    const destinationName = flight.airport?.destination?.name || 
+                           flight.destinationAirportName || 
+                           flight.destinationAirportIata || 
+                           'Unknown';
+    
+    // Extract detailed airline information
+    const airlineName = flight.airline?.name || 
+                       flight.airlineName || 
+                       this.getAirlineNameFromCode(airlineCode);
+    
+    // Extract aircraft information - handle both object and string formats
+    let aircraftInfo = 'Unknown';
+    
+    if (typeof flight.aircraft === 'object' && flight.aircraft !== null) {
+      // Handle nested aircraft object structure from getFlightDetails
+      if (flight.aircraft.model) {
+        aircraftInfo = flight.aircraft.model.text || 
+                      flight.aircraft.model.code || 
+                      'Unknown';
+      } else {
+        // Fallback to direct properties
+        aircraftInfo = flight.aircraft.text || 
+                      flight.aircraft.model || 
+                      flight.aircraft.code || 
+                      flight.aircraft.type ||
+                      flight.aircraft.name ||
+                      'Unknown';
+      }
+    } else if (typeof flight.aircraft === 'string') {
+      aircraftInfo = flight.aircraft;
+    } else {
+      // Fallback to other fields
+      aircraftInfo = flight.aircraftModel || flight.aircraftType || 'Unknown';
+    }
+    
+    // Extract registration and flight number
+    let registration = 'Unknown';
+    if (typeof flight.aircraft === 'object' && flight.aircraft !== null) {
+      registration = flight.aircraft.registration || flight.registration || 'Unknown';
+    } else {
+      registration = flight.registration || 'Unknown';
+    }
+    const flightNumber = flight.identification?.number?.default || 
+                        flight.flightNumber || 
+                        callsign;
+    
+    // Extract ETA/arrival information
+    const eta = flight.time?.scheduled?.arrival ? 
+               new Date(flight.time.scheduled.arrival * 1000).toLocaleTimeString() : 
+               (flight.estimatedArrival || flight.eta || 'Unknown');
+    
+    // console.log(`Parsing flight ${callsign}:`);
+    // console.log(`- Origin: ${originName} (${flight.airport?.origin?.code?.iata || flight.originAirportIata || 'N/A'})`);
+    // console.log(`- Destination: ${destinationName} (${flight.airport?.destination?.code?.iata || flight.destinationAirportIata || 'N/A'})`);
+    // console.log(`- Aircraft: ${aircraftInfo}`);
+    // console.log(`- Registration: ${registration}`);
+    // console.log(`- Airline: ${airlineName}`);
+    // console.log(`- Flight Number: ${flightNumber}`);
+    // console.log(`- ETA: ${eta}`);
+    
+    return {
+      callsign,
+      airline: airlineName,
+      flightNumber: flightNumber,
+      origin: originName,
+      destination: destinationName, 
+      aircraft: aircraftInfo,
+      altitude: flight.altitude || 0,
+      speed: speedMph,
+      heading: flight.heading || 0,
+      latitude: flight.latitude || 0,
+      longitude: flight.longitude || 0,
+      status: this.determineFlightStatus(flight),
+      estimatedArrival: eta,
+      flightRadarUrl: flight.id ? `https://www.flightradar24.com/${flight.id}` : undefined,
+      airlineCode: flight.airline?.code?.iata || flight.airline?.code?.icao || airlineCode,
+      registration: registration,
+      aircraftType: aircraftInfo,
+      originIATA: flight.airport?.origin?.code?.iata || flight.originAirportIata || 'Unknown',
+      destinationIATA: flight.airport?.destination?.code?.iata || flight.destinationAirportIata || 'Unknown',
+      eta: eta,
+      distance: flight.distance || 0
+    };
+  }
+
   private getAirlineNameFromCode(airlineCode: string): string {
     // Map airline codes to airline names
     const airlineMap: { [key: string]: string } = {
@@ -667,7 +741,7 @@ export class FlightService {
   }
 
   private determineFlightStatus(rawData: any): 'On Time' | 'Delayed' | 'Cancelled' | 'Unknown' {
-    if (rawData.status) {
+    if (rawData.status && typeof rawData.status === 'string') {
       const status = rawData.status.toLowerCase();
       if (status.includes('cancelled') || status.includes('canceled')) return 'Cancelled';
       if (status.includes('delayed')) return 'Delayed';
@@ -708,7 +782,7 @@ export class FlightService {
       this.creditUsageHistory = this.creditUsageHistory.slice(-100);
     }
 
-    console.log(`Credit usage: ${creditsUsed} credits for ${flightsReturned} flights (${endpoint} endpoint) - Est. cost: $${estimatedCost.toFixed(4)}`);
+    // console.log(`Credit usage: ${creditsUsed} credits for ${flightsReturned} flights (${endpoint} endpoint) - Est. cost: $${estimatedCost.toFixed(4)}`);
   }
 
   // Settings management
@@ -718,7 +792,6 @@ export class FlightService {
 
   public updateSettings(newSettings: Partial<FlightServiceSettings>): void {
     this.settings = { ...this.settings, ...newSettings };
-    console.log('FlightService settings updated:', this.settings);
   }
 
   // Credit usage analytics

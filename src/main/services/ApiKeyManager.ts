@@ -11,162 +11,11 @@ export class ApiKeyManager {
   private store: Store<StoreData>;
   private flightRadar24ApiKey: string | null = null;
   private logoCache: Map<string, string | null> = new Map();
-
-  // Mapping of airline codes to soaring-symbols filenames
-  private airlineLogoMapping: { [key: string]: string } = {
-    // Major US Airlines (only including those confirmed to exist in repository)
-    'UA': 'united-airlines.svg',
-    'UAL': 'united-airlines.svg',
-    'WN': 'southwest-airlines.svg',
-    'SWA': 'southwest-airlines.svg',
-    // Note: Delta, American Airlines, JetBlue, Alaska Airlines, etc. 
-    // are not currently available in the soaring-symbols repository
-    
-    // European Airlines
-    'LH': 'lufthansa.svg',
-    'DLH': 'lufthansa.svg',
-    'BA': 'british-airways.svg',
-    'BAW': 'british-airways.svg',
-    'AF': 'air-france.svg',
-    'AFR': 'air-france.svg',
-    'KL': 'klm.svg',
-    'KLM': 'klm.svg',
-    'LX': 'swiss-international-air-lines.svg',
-    'SWR': 'swiss-international-air-lines.svg',
-    'OS': 'austrian-airlines.svg',
-    'AUA': 'austrian-airlines.svg',
-    'SN': 'brussels-airlines.svg',
-    'BEL': 'brussels-airlines.svg',
-    'IB': 'iberia.svg',
-    'IBE': 'iberia.svg',
-    'AZ': 'alitalia.svg',
-    'AZA': 'alitalia.svg',
-    'TP': 'tap-air-portugal.svg',
-    'TAP': 'tap-air-portugal.svg',
-    'A3': 'aegean-airlines.svg',
-    'AEE': 'aegean-airlines.svg',
-    'SK': 'scandinavian-airlines.svg',
-    'SAS': 'scandinavian-airlines.svg',
-    'AY': 'finnair.svg',
-    'FIN': 'finnair.svg',
-    'FR': 'ryanair.svg',
-    'RYR': 'ryanair.svg',
-    'U2': 'easyjet.svg',
-    'EZY': 'easyjet.svg',
-    'VY': 'vueling.svg',
-    'VLG': 'vueling.svg',
-    'W6': 'wizz-air.svg',
-    'WZZ': 'wizz-air.svg',
-    
-    // Middle Eastern Airlines
-    'EK': 'emirates.svg',
-    'UAE': 'emirates.svg',
-    'QR': 'qatar-airways.svg',
-    'QTR': 'qatar-airways.svg',
-    'EY': 'etihad-airways.svg',
-    'ETD': 'etihad-airways.svg',
-    'MS': 'egyptair.svg',
-    'MSR': 'egyptair.svg',
-    'TK': 'turkish-airlines.svg',
-    'THY': 'turkish-airlines.svg',
-    'SV': 'saudi-arabian-airlines.svg',
-    'SVA': 'saudi-arabian-airlines.svg',
-    
-    // Asian Airlines
-    'SQ': 'singapore-airlines.svg',
-    'SIA': 'singapore-airlines.svg',
-    'CX': 'cathay-pacific.svg',
-    'CPA': 'cathay-pacific.svg',
-    'JL': 'japan-airlines.svg',
-    'JAL': 'japan-airlines.svg',
-    'NH': 'all-nippon-airways.svg',
-    'ANA': 'all-nippon-airways.svg',
-    'KE': 'korean-air.svg',
-    'KAL': 'korean-air.svg',
-    'OZ': 'asiana-airlines.svg',
-    'AAR': 'asiana-airlines.svg',
-    'TG': 'thai-airways.svg',
-    'THA': 'thai-airways.svg',
-    'MH': 'malaysia-airlines.svg',
-    'MAS': 'malaysia-airlines.svg',
-    'CI': 'china-airlines.svg',
-    'CAL': 'china-airlines.svg',
-    'BR': 'eva-air.svg',
-    'EVA': 'eva-air.svg',
-    'CZ': 'china-southern-airlines.svg',
-    'CSN': 'china-southern-airlines.svg',
-    'CA': 'air-china.svg',
-    'CCA': 'air-china.svg',
-    'MU': 'china-eastern-airlines.svg',
-    'CES': 'china-eastern-airlines.svg',
-    'AI': 'air-india.svg',
-    'AIC': 'air-india.svg',
-    '6E': 'indigo.svg',
-    'IGO': 'indigo.svg',
-    'SG': 'spicejet.svg',
-    'SEJ': 'spicejet.svg',
-    
-    // Canadian Airlines
-    'AC': 'air-canada.svg',
-    'ACA': 'air-canada.svg',
-    'WS': 'westjet.svg',
-    'WJA': 'westjet.svg',
-    'PD': 'porter-airlines.svg',
-    'POE': 'porter-airlines.svg',
-    
-    // Australian/Oceania Airlines
-    'QF': 'qantas.svg',
-    'QFA': 'qantas.svg',
-    'JQ': 'jetstar.svg',
-    'JST': 'jetstar.svg',
-    'VA': 'virgin-australia.svg',
-    'VOZ': 'virgin-australia.svg',
-    'NZ': 'air-new-zealand.svg',
-    'ANZ': 'air-new-zealand.svg',
-    'FJ': 'fiji-airways.svg',
-    'FJI': 'fiji-airways.svg',
-    
-    // Latin American Airlines
-    'AM': 'aeromexico.svg',
-    'AMX': 'aeromexico.svg',
-    'AV': 'avianca.svg',
-    'AVA': 'avianca.svg',
-    'LA': 'latam.svg',
-    'LAN': 'latam.svg',
-    'G3': 'gol.svg',
-    'GLO': 'gol.svg',
-    'JJ': 'tam.svg',
-    'TAM': 'tam.svg',
-    'AR': 'aerolineas-argentinas.svg',
-    'ARG': 'aerolineas-argentinas.svg',
-    'CM': 'copa-airlines.svg',
-    'CMP': 'copa-airlines.svg',
-    
-    // African Airlines
-    'SA': 'south-african-airways.svg',
-    'SAA': 'south-african-airways.svg',
-    'ET': 'ethiopian-airlines.svg',
-    'ETH': 'ethiopian-airlines.svg',
-    'AT': 'royal-air-maroc.svg',
-    'RAM': 'royal-air-maroc.svg',
-    'KQ': 'kenya-airways.svg',
-    'KQA': 'kenya-airways.svg',
-    
-    // Regional/Charter Airlines
-    'RPA': 'republic-airways.svg',
-    'SKW': 'skywest-airlines.svg',
-    'PDT': 'piedmont-airlines.svg',
-    'PSA': 'psa-airlines.svg',
-    'ENY': 'envoy-air.svg',
-    'ASH': 'mesa-airlines.svg',
-    'TCF': 'shuttle-america.svg',
-    'GJS': 'gojet-airlines.svg',
-    'CPZ': 'compass-airlines.svg',
-    'FLG': 'flagship.svg',
-    
-    // Note: Most cargo airlines (UPS, FedEx, etc.) and special airlines 
-    // are not available in the soaring-symbols repository
-  };
+  private airlineDatabase: any[] | null = null;
+  private airlineDatabaseLastFetch: number = 0;
+  
+  // Airline database URL
+  private readonly AIRLINE_DATABASE_URL = 'https://raw.githubusercontent.com/dotmarn/Airlines/refs/heads/master/airlines.json';
 
   private constructor() {
     this.store = new Store<StoreData>({
@@ -252,8 +101,8 @@ export class ApiKeyManager {
         return cachedLogos[airlineCode];
       }
 
-      // Try to fetch from soaring-symbols repository
-      const logoUrl = await this.fetchAirlineLogoFromGitHub(airlineCode);
+      // Try to fetch from airline database
+      const logoUrl = await this.fetchAirlineLogoFromDatabase(airlineCode);
       if (logoUrl) {
         // Cache the logo URL
         cachedLogos[airlineCode] = logoUrl;
@@ -268,7 +117,7 @@ export class ApiKeyManager {
     }
   }
 
-  private async fetchAirlineLogoFromGitHub(airlineCode: string): Promise<string | null> {
+  private async fetchAirlineLogoFromDatabase(airlineCode: string): Promise<string | null> {
     try {
       // Check cache first
       if (this.logoCache.has(airlineCode)) {
@@ -282,25 +131,26 @@ export class ApiKeyManager {
         return null;
       }
 
-      // Get the correct filename from mapping
-      const filename = this.airlineLogoMapping[airlineCode.toUpperCase()];
-      if (!filename) {
-        console.log(`No logo mapping found for airline code: ${airlineCode}`);
+      // Fetch airline database if not cached or if cache is old (1 hour)
+      if (!this.airlineDatabase || Date.now() - this.airlineDatabaseLastFetch > 3600000) {
+        await this.fetchAirlineDatabase();
+      }
+
+      if (!this.airlineDatabase) {
+        console.log('Failed to fetch airline database');
         this.logoCache.set(airlineCode, null);
         return null;
       }
 
-      const logoUrl = `https://raw.githubusercontent.com/anhthang/soaring-symbols/main/icons/${filename}`;
+      // Search for airline by code
+      const airline = this.airlineDatabase.find(a => a.id === airlineCode.toUpperCase());
       
-      // Test if the logo exists
-      const response = await fetch(logoUrl, { method: 'HEAD' });
-      
-      if (response.ok) {
+      if (airline && airline.logo) {
         // Cache the successful URL
-        this.logoCache.set(airlineCode, logoUrl);
-        return logoUrl;
+        this.logoCache.set(airlineCode, airline.logo);
+        return airline.logo;
       } else {
-        console.log(`Logo not found for ${airlineCode} at ${logoUrl}`);
+        console.log(`Logo not found for airline code: ${airlineCode}`);
         // Cache the negative result to avoid repeated requests
         this.logoCache.set(airlineCode, null);
         return null;
@@ -310,6 +160,23 @@ export class ApiKeyManager {
       // Cache the negative result 
       this.logoCache.set(airlineCode, null);
       return null;
+    }
+  }
+
+  private async fetchAirlineDatabase(): Promise<void> {
+    try {
+      console.log('Fetching airline database...');
+      const response = await fetch(this.AIRLINE_DATABASE_URL);
+      
+      if (response.ok) {
+        this.airlineDatabase = await response.json() as any[];
+        this.airlineDatabaseLastFetch = Date.now();
+        console.log(`Fetched airline database with ${this.airlineDatabase?.length} airlines`);
+      } else {
+        console.error('Failed to fetch airline database:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching airline database:', error);
     }
   }
 

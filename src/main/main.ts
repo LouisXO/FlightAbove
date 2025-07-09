@@ -69,11 +69,9 @@ ipcMain.handle('set-settings', async (event, settings) => {
   }
   
   flightService.updateSettings(flightServiceSettings);
-  console.log('Settings updated:', settings);
   
   // Trigger immediate refresh when demo mode is enabled
   if (demoModeChanged && demoModeEnabled) {
-    console.log('Demo mode enabled via settings - triggering immediate refresh');
     setTimeout(() => {
       updateMenuBarDisplay();
     }, 100);
@@ -148,11 +146,9 @@ ipcMain.handle('get-demo-mode', async () => {
 
 ipcMain.handle('set-demo-mode', async (event, enabled: boolean) => {
   flightService.updateSettings({ demoMode: enabled });
-  console.log('Demo mode updated:', enabled);
   
   // Trigger immediate refresh when demo mode is enabled
   if (enabled) {
-    console.log('Demo mode enabled - triggering immediate refresh');
     // Small delay to ensure settings are applied
     setTimeout(() => {
       updateMenuBarDisplay();
@@ -347,6 +343,9 @@ const createMenuBar = () => {
     mb.tray.on('click', () => {
       if (mb.window) {
         mb.showWindow();
+        // Send current flight data to renderer when window is shown
+        const lastFlightData = flightService.getLastFlightData();
+        mb.window.webContents.send('flight-data-update', lastFlightData || []);
       }
     });
   });
@@ -360,6 +359,14 @@ const createMenuBar = () => {
     mb.window?.on('blur', () => {
       if (mb.window) {
         mb.hideWindow();
+      }
+    });
+    
+    // Send initial flight data when window is ready
+    mb.window?.webContents.once('did-finish-load', () => {
+      if (mb.window) {
+        const lastFlightData = flightService.getLastFlightData();
+        mb.window.webContents.send('flight-data-update', lastFlightData || []);
       }
     });
   });

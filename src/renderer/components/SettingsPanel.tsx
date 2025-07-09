@@ -20,9 +20,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
     history: [] as any[]
   });
   const [settings, setSettings] = useState({
-    refreshIntervalMinutes: 30,
-    maxFlightsPerRequest: 1,
-    radiusKm: 20,
+    refreshIntervalMinutes: 5,
+    maxFlightsPerRequest: 10,
+    radiusKm: 15,
     useFullEndpoint: true,
     demoMode: false
   });
@@ -72,9 +72,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
       const currentSettings = await window.electronAPI?.getSettings();
       if (currentSettings) {
         setSettings({
-          refreshIntervalMinutes: currentSettings.refreshIntervalMinutes || 30,
-          maxFlightsPerRequest: currentSettings.maxFlightsPerRequest || 1,
-          radiusKm: currentSettings.radiusKm || 20,
+          refreshIntervalMinutes: currentSettings.refreshIntervalMinutes || 5,
+          maxFlightsPerRequest: currentSettings.maxFlightsPerRequest || 10,
+          radiusKm: currentSettings.radiusKm || 15,
           useFullEndpoint: currentSettings.useFullEndpoint || true,
           demoMode: currentSettings.demoMode || false
         });
@@ -183,73 +183,20 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
       </div>
         
         <div className="settings-content">
+          {/* API Key section hidden - using unofficial API that doesn't require keys
           <div className="setting-section">
             <h3>🔑 FlightRadar24 API Configuration</h3>
             <p className="setting-description">
               Enter your FlightRadar24 API key to get real flight data instead of mock data.
             </p>
-            
-            <div className="api-key-status">
-              <span className={`status-indicator ${hasApiKey ? 'active' : 'inactive'}`}>
-                {hasApiKey ? '🟢 Active' : '🔴 Inactive'}
-              </span>
-              <span className="status-text">
-                {hasApiKey ? 'Using real flight data from FlightRadar24' : 'No flights shown - add API key to see real flights overhead'}
-              </span>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="flightradar24-key">API Key:</label>
-              <div className="password-input">
-                <input
-                  id="flightradar24-key"
-                  type={showApiKey ? 'text' : 'password'}
-                  value={flightRadar24ApiKey}
-                  onChange={(e) => setFlightRadar24ApiKey(e.target.value)}
-                  placeholder="Enter your FlightRadar24 API key"
-                  className="api-key-input"
-                />
-                <button
-                  type="button"
-                  className="toggle-visibility"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                >
-                  {showApiKey ? '👁️' : '👁️‍🗨️'}
-                </button>
-              </div>
-            </div>
-
-            <div className="button-group">
-              <button
-                className="save-button"
-                onClick={handleSaveApiKey}
-                disabled={isLoading || !flightRadar24ApiKey.trim()}
-              >
-                {isLoading ? '💾 Saving...' : '💾  Save API Key'}
-              </button>
-              
-              {hasApiKey && (
-                <button
-                  className="remove-button"
-                  onClick={handleRemoveApiKey}
-                  disabled={isLoading}
-                >
-                  🗑️  Remove API Key
-                </button>
-              )}
-            </div>
-
-            {message && (
-              <div className={`message ${message.includes('❌') ? 'error' : 'success'}`}>
-                {message}
-              </div>
-            )}
+            ...
           </div>
+          */}
 
           <div className="setting-section">
-            <h3>🎮 Demo Mode</h3>
+            <h3>🛫 Flight Data Source</h3>
             <p className="setting-description">
-              Enable demo mode to showcase the app with simulated flight data and credit usage tracking without needing a real API key.
+              FlightAbove uses real-time flight data by default. Enable demo mode to showcase the app with simulated flight scenarios and test different settings.
             </p>
             
             <div className="demo-mode-toggle">
@@ -280,43 +227,30 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
             )}
           </div>
 
-          {(hasApiKey || settings.demoMode) && (
-            <div className="setting-section">
-              <h3>💳 Credit Usage & Analytics</h3>
+          <div className="setting-section">
+            <h3>📊 Usage Analytics</h3>
               <div className="credit-usage-grid">
                 <div className="credit-card">
                   <h4>Last Hour</h4>
                   <div className="credit-value">{creditUsage.hourly}</div>
-                  <div className="credit-label">credits</div>
+                  <div className="credit-label">requests</div>
                 </div>
                 <div className="credit-card">
                   <h4>Today</h4>
                   <div className="credit-value">{creditUsage.daily}</div>
-                  <div className="credit-label">credits</div>
+                  <div className="credit-label">requests</div>
                 </div>
                 <div className="credit-card">
                   <h4>Est. Monthly</h4>
                   <div className="credit-value">{creditUsage.monthly.toLocaleString()}</div>
-                  <div className="credit-label">credits</div>
+                  <div className="credit-label">requests</div>
                 </div>
               </div>
-              
-              {creditUsage.monthly > 0 && (
-                <div className="plan-recommendation">
-                  <h4>💡 Recommended Plan</h4>
-                  <div className="plan-info" style={{ borderColor: getPlanRecommendation(creditUsage.monthly).color }}>
-                    <strong>{getPlanRecommendation(creditUsage.monthly).plan}</strong> - {getPlanRecommendation(creditUsage.monthly).cost}
-                    <br />
-                    <small>Based on your estimated monthly usage of {creditUsage.monthly.toLocaleString()} credits</small>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
-          {(hasApiKey || settings.demoMode) && (
-            <div className="setting-section">
-              <h3>⚙️ Credit Optimization Settings</h3>
+            </div>
+          
+          <div className="setting-section">
+            <h3>⚙️ Flight Tracking Settings</h3>
               <div className="settings-grid">
                 <div className="setting-item">
                   <label>Refresh Interval</label>
@@ -324,6 +258,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                     value={settings.refreshIntervalMinutes} 
                     onChange={(e) => setSettings({...settings, refreshIntervalMinutes: parseInt(e.target.value)})}
                   >
+                    <option value={1}>1 minute (very high usage)</option>
                     <option value={5}>5 minutes (high usage)</option>
                     <option value={10}>10 minutes</option>
                     <option value={15}>15 minutes</option>
@@ -351,10 +286,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                     value={settings.radiusKm} 
                     onChange={(e) => setSettings({...settings, radiusKm: parseInt(e.target.value)})}
                   >
-                    <option value={20}>20 km (recommended)</option>
-                    <option value={50}>50 km</option>
-                    <option value={100}>100 km</option>
-                    <option value={200}>200 km</option>
+                    <option value={10}>10 km (close range)</option>
+                    <option value={15}>15 km (recommended for visible aircraft)</option>
+                    <option value={25}>25 km (extended range)</option>
+                    <option value={50}>50 km (wide area)</option>
                   </select>
                 </div>
                 
@@ -371,12 +306,24 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
               </div>
               
               <div className="settings-impact">
-                <h4>💰 Credit Usage Impact</h4>
+                <h4>📡 Update Frequency</h4>
                 <p>
-                  With current settings: ~{Math.round((60 / settings.refreshIntervalMinutes) * settings.maxFlightsPerRequest * (settings.useFullEndpoint ? 8 : 6))} credits/hour
+                  With current settings: ~{Math.round(60 / settings.refreshIntervalMinutes)} updates/hour
                   <br />
-                  <small>Est. {Math.round((60 / settings.refreshIntervalMinutes) * settings.maxFlightsPerRequest * (settings.useFullEndpoint ? 8 : 6) * 24 * 30).toLocaleString()} credits/month</small>
+                  <small>Tracking up to {settings.maxFlightsPerRequest} flights within {settings.radiusKm}km every {settings.refreshIntervalMinutes} minute{settings.refreshIntervalMinutes > 1 ? 's' : ''}</small>
                 </p>
+                {settings.refreshIntervalMinutes === 1 && (
+                  <div className="usage-warning">
+                    <strong>⚠️ High Usage Warning:</strong> 1-minute refresh will update very frequently. 
+                    This is great for real-time tracking but may consume significant system resources.
+                  </div>
+                )}
+                {settings.refreshIntervalMinutes <= 5 && (
+                  <div className="usage-info">
+                    <strong>💡 Tip:</strong> Frequent updates provide more real-time data but use more resources. 
+                    Consider using 10-30 minutes for normal usage.
+                  </div>
+                )}
               </div>
               
               <button 
@@ -387,21 +334,65 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                 {isLoading ? '💾 Saving...' : '💾 Save Settings'}
               </button>
             </div>
-          )}
 
           <div className="setting-section">
-            <h3>📖 How to Get Your API Key</h3>
-            <ol className="instructions">
-              <li>Visit <a href="#" onClick={() => window.electronAPI?.openExternal('https://fr24api.flightradar24.com')}>FlightRadar24 API Website</a></li>
-              <li>Create an account or log in to your existing account</li>
-              <li>Choose a subscription plan (Explorer, Essential, or Advanced)</li>
-              <li>Go to your dashboard and find "API Keys" or "Access Tokens"</li>
-              <li>Copy your API key and paste it in the field above</li>
-              <li>Click "Save API Key" to start using real flight data</li>
-            </ol>
+            <h3>✈️ About Flight Visibility</h3>
+            <p className="setting-description">
+              Optimize your settings for the best aircraft spotting experience based on visibility ranges and tracking preferences.
+            </p>
             
-            <div className="api-note">
-              <p><strong>Note:</strong> The app now uses ultra-conservative settings by default (30-minute intervals, 1 flight max, 20km radius, full endpoint) optimized for 60,000+ credit plans. These settings use approximately 11,520 credits per month.</p>
+            <div className="visibility-section">
+              <h4 className="visibility-header">🎯 Optimal Settings for Spotting Aircraft</h4>
+              <div className="visibility-grid">
+                <div className="visibility-card">
+                  <div className="visibility-icon">📍</div>
+                  <div className="visibility-content">
+                    <h5>15km radius</h5>
+                    <p>Perfect for aircraft you can actually see overhead</p>
+                  </div>
+                </div>
+                <div className="visibility-card">
+                  <div className="visibility-icon">⏱️</div>
+                  <div className="visibility-content">
+                    <h5>5-minute updates</h5>
+                    <p>Keep track of fast-moving aircraft</p>
+                  </div>
+                </div>
+                <div className="visibility-card">
+                  <div className="visibility-icon">🎛️</div>
+                  <div className="visibility-content">
+                    <h5>10 flights max</h5>
+                    <p>See all nearby traffic without clutter</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="visibility-section">
+              <h4 className="visibility-header">👁️ Visibility Guidelines</h4>
+              <div className="visibility-ranges">
+                <div className="range-item">
+                  <div className="range-icon">🛩️</div>
+                  <div className="range-info">
+                    <div className="range-distance">10-15km</div>
+                    <div className="range-description">Commercial aircraft clearly visible at cruise altitude</div>
+                  </div>
+                </div>
+                <div className="range-item">
+                  <div className="range-icon">🚁</div>
+                  <div className="range-info">
+                    <div className="range-distance">5-10km</div>
+                    <div className="range-description">Lower altitude traffic (helicopters, small aircraft)</div>
+                  </div>
+                </div>
+                <div className="range-item">
+                  <div className="range-icon">✈️</div>
+                  <div className="range-info">
+                    <div className="range-distance">25km+</div>
+                    <div className="range-description">Extended tracking for approaching/departing aircraft</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

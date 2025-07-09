@@ -76,6 +76,33 @@ interface AirlineLogoProps {
   airlineName: string;
 }
 
+interface AirportTooltipProps {
+  code: string;
+  name: string;
+  className?: string;
+}
+
+const AirportTooltip: React.FC<AirportTooltipProps> = ({ code, name, className = '' }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div 
+      className={`airport-tooltip-container ${className}`}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <span className={`airport ${className}`}>
+        {code}
+      </span>
+      {showTooltip && (
+        <div className="airport-tooltip">
+          {name}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AirlineLogo: React.FC<AirlineLogoProps> = ({ airlineCode, airlineName }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +199,9 @@ const App: React.FC = () => {
   const initializeApp = async () => {
     try {
       setLoading(true);
+      
+      // Small delay to ensure backend services are ready (especially in development)
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get initial location
       const currentLocation = await window.electronAPI?.getCurrentLocation();
@@ -375,9 +405,17 @@ const App: React.FC = () => {
         </div>
         
         <div className="flight-route">
-          <span className="airport origin">{currentFlight.originIATA || currentFlight.origin}</span>
+          <AirportTooltip 
+            code={currentFlight.originIATA || currentFlight.origin}
+            name={currentFlight.origin}
+            className="origin"
+          />
           <span className="route-arrow">→</span>
-          <span className="airport destination">{currentFlight.destinationIATA || currentFlight.destination}</span>
+          <AirportTooltip 
+            code={currentFlight.destinationIATA || currentFlight.destination}
+            name={currentFlight.destination}
+            className="destination"
+          />
         </div>
         
         <div className="flight-details">

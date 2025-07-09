@@ -19,53 +19,47 @@ FlightAbove transforms your Mac's menu bar into a sophisticated aviation radar, 
 ## 🚀 Key Features
 
 ### ✈️ Real-Time Flight Tracking
-- **Smart Flight Detection**: Displays nearby aircraft within configurable radius (20-500km)
+- **Smart Flight Detection**: Displays nearby aircraft within configurable radius (10-50km)
 - **Multiple Flight Navigation**: Browse through detected flights with elegant navigation controls
 - **Live Distance Calculation**: Shows exact distance to each aircraft with precision
-- **Intelligent Updates**: Configurable refresh intervals (5-60 minutes) for optimal API usage
-
-### 💳 Advanced Credit Management
-- **Usage Analytics**: Real-time tracking of API credit consumption (hourly, daily, monthly)
-- **Cost Optimization**: Intelligent settings to minimize FlightRadar24 API expenses
-- **Plan Recommendations**: Smart suggestions for Explorer ($9), Essential ($90), or Advanced ($900) plans
-- **Conservative Defaults**: Ultra-conservative settings (30-min intervals, 1 flight max, 20km radius)
+- **Ultra-Fast Updates**: Configurable refresh intervals (1-60 minutes) including real-time 1-minute tracking
 
 ### 🎮 Demo Mode
-- **Realistic Simulation**: Generate authentic flight data without API costs
+- **Realistic Simulation**: Generate authentic flight data
 - **Perfect for Testing**: Showcase features and test functionality
-- **Full Feature Access**: Credit tracking, analytics, and UI testing
+- **Full Feature Access**: Complete functionality testing
 - **Multiple Aircraft**: Demonstrates navigation with 2-4+ realistic flights
 
 ### 🎯 Rich Flight Information
 - **Comprehensive Data**: Flight number, airline, origin/destination airports (IATA codes)
-- **Aircraft Details**: Type, registration number, altitude, speed, heading
-- **Real-Time Status**: Current position, flight status (On Time/Delayed/Cancelled)
-- **Route Visualization**: Clean route display with airport codes and status indicators
+- **Aircraft Details**: Full aircraft names (e.g., "Boeing KC-135T Stratotanker"), registration numbers
+- **Real-Time Status**: Current position, altitude, speed, heading, flight status
+- **Interactive Tooltips**: Hover over airport codes to see full airport names instantly
+- **Smart Text Display**: Full airline and aircraft names with intelligent text wrapping
 
 ### 🏢 Airline Integration
-- **Authentic Branding**: Real airline logos with smart fallback handling
-- **Global Coverage**: Support for major international airlines (United, American, Delta, Southwest, JetBlue, etc.)
-- **Intelligent Detection**: Automatic airline code extraction from flight callsigns
-- **Visual Excellence**: Polished logo presentation with proper sizing and styling
+- **Comprehensive Database**: 1,224+ airlines with professional logos from Kiwi.com
+- **Global Coverage**: Major international and regional carriers (United, Air Canada, Lufthansa, Emirates, etc.)
+- **Smart Fallbacks**: Graceful handling of missing logos and private aircraft
+- **Real-Time Updates**: Automatic database refresh with 1-hour caching for performance
 
 ### 🖥️ Modern macOS Experience
-- **Beautiful Design**: Modern gradient backgrounds with sophisticated color palette
-- **Clean Interface**: Elegant cards, smooth animations, and intuitive navigation
+- **Clean Design**: Minimalist interface with transparent background and elegant white cards
+- **Sophisticated UI**: Polished cards, smooth animations, and intuitive navigation
 - **Native Behavior**: Proper menu bar integration with click-away functionality
-- **Fixed Window Size**: Optimized 500x600 window that fits perfectly on any screen
-- **Responsive Design**: Fluid layouts that adapt to content
+- **Optimal Layout**: Fixed 450px width for consistent display across all screen sizes
+- **Responsive Content**: Intelligent text wrapping and layout adaptation for any flight data
 
 ### ⚙️ Advanced Configuration
-- **Secure API Management**: Encrypted FlightRadar24 API key storage
-- **Comprehensive Settings**: Fine-tune refresh intervals, flight limits, search radius
-- **Endpoint Selection**: Choose between Light (6 credits) or Full (8 credits) endpoints
-- **Error Handling**: Intelligent API error detection with user-friendly messages
-- **Usage Monitoring**: Real-time credit consumption tracking and cost estimates
+- **Modern Settings Panel**: Redesigned interface with card-based layouts and visual indicators
+- **Intelligent Warnings**: Real-time feedback for high-usage settings with optimization tips
+- **Flight Visibility Guide**: Built-in guidelines for optimal aircraft spotting configurations
+- **Flexible Refresh Options**: 1-minute real-time to 60-minute low-usage intervals
+- **Demo Mode**: Full-featured testing environment with realistic flight simulation
 
 ## 📋 Requirements
 
 - **macOS**: Version 10.14 or later
-- **FlightRadar24 API Key**: Required for real flight data (Explorer plan: $9/month recommended)
 - **Internet Connection**: For flight data and airline logos
 - **Location Services**: IP-based geolocation (no GPS permissions required)
 
@@ -86,44 +80,33 @@ npm start
 
 ### Development Mode
 ```bash
-# Start development environment
+# Start development environment (includes Electron app)
 npm run dev
 
 # Build for production
 npm run build
 
 # Package for distribution
-npm run package
+npm run dist
+
+# Create DMG release
+npm run dist
 ```
 
 ## 🔧 Setup Guide
 
-### 1. FlightRadar24 API Key Setup
-1. **Get API Key**: Visit [FlightRadar24 API](https://fr24api.flightradar24.com/) and create an account
-2. **Choose Plan**: 
-   - **Explorer**: $9/month (60K credits) - Perfect for casual use
-   - **Essential**: $90/month (660K credits) - Heavy usage
-   - **Advanced**: $900/month (4M+ credits) - Commercial use
-3. **Configure App**: 
-   - Launch FlightAbove
-   - Click settings gear icon or right-click menu bar → Settings
-   - Enter your API key in the configuration section
-   - Click "Save API Key"
-
-### 2. Optimize Credit Usage
-The app includes intelligent defaults to minimize costs:
-- **Refresh Interval**: 30 minutes (vs. 1 minute alternatives)
-- **Flight Limit**: 1 flight per request (vs. 10+ options)
-- **Search Radius**: 20km (vs. 500km maximum)
-- **Endpoint**: Full data (8 credits) for complete information
-
-**Estimated Usage**: ~11,520 credits/month (19% of Explorer plan)
-
-### 3. Demo Mode (No API Key Required)
+### 1. Demo Mode
 1. **Enable Demo**: Toggle the "Demo Mode" switch in settings
 2. **Instant Results**: Generates 2-4 realistic flights immediately
 3. **Full Features**: Test all functionality including credit tracking
 4. **Perfect for**: Testing, demonstrations, development
+
+### 2. Optimize Performance
+The app includes intelligent defaults:
+- **Refresh Interval**: 30 minutes
+- **Flight Limit**: 1 flight per request
+- **Search Radius**: 20km
+- **Data Caching**: Efficient caching for optimal performance
 
 ## 🎮 Usage Guide
 
@@ -160,13 +143,11 @@ Monitor your API usage:
 ## 🛡️ Privacy & Security
 
 ### Data Protection
-- **API Keys**: Stored securely using macOS Keychain encryption
 - **Location Privacy**: Uses IP-based geolocation only (no GPS tracking)
 - **Minimal Data**: Flight information cached temporarily, not stored permanently
 - **No Analytics**: Zero usage tracking or personal data collection
 
 ### Security Features
-- **Encrypted Storage**: All credentials encrypted at rest
 - **HTTPS Only**: All network communications use secure connections
 - **Open Source**: Full transparency with publicly available code
 - **Minimal Permissions**: Requests only necessary system access
@@ -174,10 +155,10 @@ Monitor your API usage:
 ## 🎨 Design Philosophy
 
 ### Modern Interface
-- **Light Blue Gradient**: Beautiful sky-themed background
-- **Card-Based Layout**: Clean, organized information presentation
-- **Smooth Animations**: Subtle hover effects and transitions
-- **Typography**: Clear hierarchy with excellent readability
+- **Minimalist Design**: Clean transparent background with elegant white cards
+- **Card-Based Layout**: Organized information presentation with subtle shadows and borders
+- **Smooth Animations**: Hover effects, transitions, and interactive elements
+- **Typography**: Clear hierarchy with intelligent text wrapping for long names
 - **Color-Coded Status**: Visual indicators for flight status (On Time, Delayed, etc.)
 
 ### User Experience
@@ -186,27 +167,42 @@ Monitor your API usage:
 - **Error Handling**: Friendly error messages with actionable solutions
 - **Performance**: Optimized for minimal resource usage
 
+## ⚡ Performance Optimization
+
+### Recommended Settings
+| Setting | Light | Balanced | Performance |
+|---------|-------------|----------|------------|
+| **Refresh** | 30 min | 10 min | 5 min |
+| **Flights** | 1 | 3 | 5 |
+| **Radius** | 20km | 100km | 200km |
+| **Cache** | 1 hour | 30 min | 15 min |
+
+### Usage Examples
+- **Casual User**: Light settings for minimal resource usage
+- **Regular User**: Balanced settings for good performance
+- **Power User**: Performance settings for maximum data
+
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
 #### No Flights Detected
-- **Verify API Key**: Ensure your FlightRadar24 API key is entered correctly
-- **Check Credits**: Confirm you have sufficient API credits remaining
+- **Check Settings**: Verify your search radius and refresh interval settings
 - **Try Demo Mode**: Enable demo mode to test functionality
 - **Increase Radius**: Expand search radius in settings for more coverage
+- **Check Connection**: Ensure you have an active internet connection
 
-#### Credit/Cost Concerns
-- **Use Conservative Settings**: 30-minute intervals, 1 flight max, 20km radius
-- **Monitor Usage**: Check daily/monthly consumption in settings
-- **Consider Demo Mode**: Use for testing without consuming credits
-- **Explorer Plan**: $9/month plan sufficient for most users
+#### Performance Issues
+- **Adjust Settings**: Use conservative refresh intervals (30+ minutes)
+- **Reduce Radius**: Decrease search radius for faster updates
+- **Clear Cache**: Reset the application cache if needed
+- **Check Resources**: Monitor system resource usage
 
-#### API Errors
-- **402 Payment Required**: Top up your FlightRadar24 account credits
-- **401 Invalid Key**: Verify your API key is correct and active
-- **Rate Limits**: Increase refresh interval to reduce request frequency
-- **Network Issues**: Check internet connection and retry
+#### Network Issues
+- **Check Connection**: Verify internet connectivity
+- **Firewall Settings**: Ensure the app has network access
+- **Try Different Network**: Test on another network if possible
+- **Enable Demo Mode**: Use demo mode when offline
 
 ### Debug Mode
 Enable detailed logging:
@@ -257,22 +253,6 @@ DEBUG=flight-above npm start
 - **Modern React**: Hooks and functional components
 - **Clean Architecture**: Well-organized, maintainable code
 - **Comprehensive Comments**: Clear documentation
-
-## 📊 API Usage Optimization
-
-### Cost-Effective Settings
-| Setting | Conservative | Balanced | Aggressive |
-|---------|-------------|----------|------------|
-| **Refresh** | 30 min | 10 min | 5 min |
-| **Flights** | 1 | 3 | 5 |
-| **Radius** | 20km | 100km | 200km |
-| **Monthly Credits** | ~11K | ~50K | ~200K+ |
-| **Plan Needed** | Explorer | Explorer/Essential | Essential+ |
-
-### Usage Examples
-- **Casual Aviation Fan**: Conservative settings (~11K credits/month)
-- **Aviation Enthusiast**: Balanced settings (~50K credits/month)  
-- **Professional Use**: Aggressive settings (200K+ credits/month)
 
 ## 📄 License
 
