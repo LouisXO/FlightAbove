@@ -3,6 +3,14 @@ import './App.css';
 import SettingsPanel from './components/SettingsPanel';
 
 // TypeScript interface declarations
+interface ApiError {
+  type: 'payment_required' | 'invalid_key' | 'rate_limit' | 'network' | 'other';
+  message: string;
+  timestamp: number;
+  statusCode?: number;
+  details?: string;
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -22,6 +30,12 @@ declare global {
       removeFlightRadar24ApiKey: () => Promise<{ success: boolean }>;
       getAllApiKeys: () => Promise<{ flightRadar24: boolean; openSkyNetwork: boolean }>;
       getAirlineLogo: (airlineCode: string) => Promise<string | null>;
+      getCreditUsageHistory: () => Promise<any[]>;
+      getDailyCreditUsage: () => Promise<number>;
+      getHourlyCreditUsage: () => Promise<number>;
+      estimateMonthlyCredits: () => Promise<number>;
+      getLastApiError: () => Promise<ApiError | null>;
+      clearApiError: () => Promise<void>;
     };
   }
 }
@@ -113,8 +127,9 @@ const App: React.FC = () => {
   const [location, setLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<ApiError | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [currentPage, setCurrentPage] = useState<'main' | 'settings'>('main');
   const [selectedFlightIndex, setSelectedFlightIndex] = useState(0);
 
   useEffect(() => {
@@ -123,12 +138,16 @@ const App: React.FC = () => {
 
     // Set up event listeners
     if (window.electronAPI) {
-      window.electronAPI.onFlightDataUpdate((data: FlightData[]) => {
+      window.electronAPI.onFlightDataUpdate(async (data: FlightData[]) => {
         setFlightData(data || []);
         setLastUpdate(new Date());
         setLoading(false);
         setError(null);
         setSelectedFlightIndex(0); // Reset to first flight
+        
+        // Check for API errors after each update
+        const apiError = await window.electronAPI.getLastApiError();
+        setApiError(apiError);
       });
 
       window.electronAPI.onLocationUpdate((loc: Location) => {
@@ -137,7 +156,7 @@ const App: React.FC = () => {
 
       // Listen for show-settings message from main process
       window.electronAPI.on('show-settings', () => {
-        setShowSettings(true);
+        setCurrentPage('settings');
       });
     }
 
@@ -162,6 +181,10 @@ const App: React.FC = () => {
       const initialFlightData = await window.electronAPI?.getFlightData();
       setFlightData(initialFlightData || []);
       
+      // Check for API errors
+      const apiError = await window.electronAPI?.getLastApiError();
+      setApiError(apiError);
+      
       setLastUpdate(new Date());
       setLoading(false);
     } catch (err) {
@@ -181,12 +204,12 @@ const App: React.FC = () => {
     return `Updated ${Math.floor(diff / 3600)}h ago`;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusClass = (status: string) => {
     switch (status) {
-      case 'On Time': return '#22c55e';
-      case 'Delayed': return '#f59e0b';
-      case 'Cancelled': return '#ef4444';
-      default: return '#6b7280';
+      case 'On Time': return 'flight-status on-time';
+      case 'Delayed': return 'flight-status delayed';
+      case 'Cancelled': return 'flight-status cancelled';
+      default: return 'flight-status unknown';
     }
   };
 
@@ -199,6 +222,23 @@ const App: React.FC = () => {
       setSelectedFlightIndex(prev => prev < flightData.length - 1 ? prev + 1 : 0);
     }
   };
+
+  const handleDismissApiError = async () => {
+    await window.electronAPI?.clearApiError();
+    setApiError(null);
+  };
+
+  const getApiErrorIcon = (type: ApiError['type']) => {
+    switch (type) {
+      case 'payment_required': return '💳';
+      case 'invalid_key': return '🔑';
+      case 'rate_limit': return '⏱️';
+      case 'network': return '🌐';
+      default: return '⚠️';
+    }
+  };
+
+
 
   if (loading) {
     return (
@@ -221,12 +261,50 @@ const App: React.FC = () => {
     );
   }
 
+  // Render settings page
+  if (currentPage === 'settings') {
+    return (
+      <SettingsPanel 
+        onClose={() => setCurrentPage('main')}
+      />
+    );
+  }
+
   if (!flightData || flightData.length === 0) {
     return (
       <div className="app no-flights">
+        {apiError && (
+          <div className={`api-error-banner ${apiError.type.replace('_', '-')}`}>
+            <div className="api-error-content">
+              <div className="api-error-header">
+                <span className="api-error-icon">{getApiErrorIcon(apiError.type)}</span>
+                <span className="api-error-message">{apiError.message}</span>
+                <button 
+                  className="api-error-dismiss"
+                  onClick={handleDismissApiError}
+                  title="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="api-error-details">
+                {apiError.details}
+              </div>
+              {apiError.type === 'payment_required' && (
+                <button 
+                  className="api-error-action"
+                  onClick={() => window.electronAPI?.openExternal('https://fr24api.flightradar24.com')}
+                >
+                  Top up account
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="no-flights-content">
           <div className="no-flights-icon">🛩️</div>
-          <p>No flights nearby</p>
+          <p>{apiError ? 'Unable to fetch flights' : 'No flights nearby'}</p>
           <small className="last-update">{formatLastUpdate()}</small>
         </div>
         
@@ -236,7 +314,7 @@ const App: React.FC = () => {
               className="settings-button"
               onClick={(e) => {
                 e.stopPropagation();
-                setShowSettings(true);
+                setCurrentPage('settings');
               }}
               title="Settings"
             >
@@ -246,15 +324,14 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        {showSettings && (
-          <SettingsPanel onClose={() => setShowSettings(false)} />
-        )}
+        {/* Settings are now handled by page navigation */}
       </div>
     );
   }
 
   const currentFlight = flightData[selectedFlightIndex];
 
+  // Render main page
   return (
     <div className="app">
       {/* Flight Navigation */}
@@ -292,10 +369,7 @@ const App: React.FC = () => {
               <span className="flight-number">{currentFlight.flightNumber}</span>
             </div>
           </div>
-          <div 
-            className="flight-status"
-            style={{ color: getStatusColor(currentFlight.status) }}
-          >
+          <div className={getStatusClass(currentFlight.status)}>
             {currentFlight.status}
           </div>
         </div>
@@ -347,7 +421,7 @@ const App: React.FC = () => {
             className="settings-button"
             onClick={(e) => {
               e.stopPropagation();
-              setShowSettings(true);
+              setCurrentPage('settings');
             }}
             title="Settings"
           >
@@ -357,9 +431,7 @@ const App: React.FC = () => {
         </div>
       </div>
       
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
+      {/* Settings are now handled by page navigation */}
     </div>
   );
 };

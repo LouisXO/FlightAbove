@@ -25,64 +25,94 @@ export interface FlightData {
   eta?: string;
 }
 
+export interface CreditUsage {
+  creditsUsed: number;
+  flightsReturned: number;
+  endpoint: string;
+  timestamp: number;
+  estimatedCost: number; // Estimated cost in USD (assuming $0.0003 per credit)
+}
+
+export interface FlightServiceSettings {
+  refreshIntervalMinutes: number; // Default: 30 minutes
+  maxFlightsPerRequest: number;   // Default: 1 flight
+  radiusKm: number;              // Default: 20km
+  useFullEndpoint: boolean;       // Default: true (use full endpoint)
+  demoMode: boolean;             // Default: false (enables demo mode without API key)
+}
+
 export interface Location {
   latitude: number;
   longitude: number;
   accuracy: number;
 }
 
+export interface ApiError {
+  type: 'payment_required' | 'invalid_key' | 'rate_limit' | 'network' | 'other';
+  message: string;
+  timestamp: number;
+  statusCode?: number;
+  details?: string;
+}
+
 export class FlightService {
   private static instance: FlightService;
   private lastFlightData: FlightData[] = []; // Changed to array
   private apiKeyManager: ApiKeyManager;
-  private mockFlights: FlightData[] = [
+  private creditUsageHistory: CreditUsage[] = [];
+  private lastApiError: ApiError | null = null;
+  private settings: FlightServiceSettings = {
+    refreshIntervalMinutes: 30,  // 1 minute for frequent updates
+    maxFlightsPerRequest: 1,    // Limit to 3 flights per request
+    radiusKm: 20,              // 50km radius
+    useFullEndpoint: true,     // Use full endpoint for complete data
+    demoMode: false           // Demo mode disabled by default
+  };
+  private demoFlightTemplates = [
     {
-      callsign: 'UAL1234',
+      callsigns: ['UAL1234', 'UAL5678', 'UAL9012'],
       airline: 'United Airlines',
-      flightNumber: 'UA1234',
-      origin: 'LAX',
-      destination: 'JFK',
-      aircraft: 'Boeing 737-800',
-      altitude: 35000,
-      speed: 580,
-      heading: 85,
-      latitude: 37.7749,
-      longitude: -122.4194,
-      status: 'On Time',
-      estimatedArrival: '2024-01-15T18:30:00Z',
-      flightRadarUrl: 'https://www.flightradar24.com/UAL1234'
+      flightNumbers: ['UA1234', 'UA5678', 'UA9012'],
+      origins: ['LAX', 'SFO', 'DEN'],
+      destinations: ['JFK', 'ORD', 'IAH'],
+      aircraft: ['Boeing 737-800', 'Boeing 777-200', 'Airbus A320'],
+      airlineCode: 'UAL'
     },
     {
-      callsign: 'AAL5678',
+      callsigns: ['AAL5678', 'AAL3456', 'AAL7890'],
       airline: 'American Airlines',
-      flightNumber: 'AA5678',
-      origin: 'DFW',
-      destination: 'ORD',
-      aircraft: 'Airbus A320',
-      altitude: 32000,
-      speed: 520,
-      heading: 45,
-      latitude: 32.8968,
-      longitude: -97.0380,
-      status: 'Delayed',
-      estimatedArrival: '2024-01-15T19:45:00Z',
-      flightRadarUrl: 'https://www.flightradar24.com/AAL5678'
+      flightNumbers: ['AA5678', 'AA3456', 'AA7890'],
+      origins: ['DFW', 'MIA', 'PHX'],
+      destinations: ['ORD', 'BOS', 'LGA'],
+      aircraft: ['Airbus A320', 'Boeing 737-800', 'Boeing 777-300'],
+      airlineCode: 'AAL'
     },
     {
-      callsign: 'DAL9876',
+      callsigns: ['DAL9876', 'DAL2468', 'DAL1357'],
       airline: 'Delta Air Lines',
-      flightNumber: 'DL9876',
-      origin: 'ATL',
-      destination: 'SEA',
-      aircraft: 'Boeing 757-200',
-      altitude: 38000,
-      speed: 600,
-      heading: 315,
-      latitude: 33.6407,
-      longitude: -84.4277,
-      status: 'On Time',
-      estimatedArrival: '2024-01-15T21:15:00Z',
-      flightRadarUrl: 'https://www.flightradar24.com/DAL9876'
+      flightNumbers: ['DL9876', 'DL2468', 'DL1357'],
+      origins: ['ATL', 'MSP', 'DTW'],
+      destinations: ['SEA', 'LAX', 'JFK'],
+      aircraft: ['Boeing 757-200', 'Airbus A330', 'Boeing 737-900'],
+      airlineCode: 'DAL'
+    },
+    {
+      callsigns: ['SWA1111', 'SWA2222', 'SWA3333'],
+      airline: 'Southwest Airlines',
+      flightNumbers: ['WN1111', 'WN2222', 'WN3333'],
+      origins: ['MDW', 'BWI', 'LAS'],
+      destinations: ['LAX', 'DEN', 'PHX'],
+      aircraft: ['Boeing 737-700', 'Boeing 737-800', 'Boeing 737 MAX 8'],
+      airlineCode: 'SWA'
+    },
+    {
+      callsigns: ['JBU4567', 'JBU8901', 'JBU2345'],
+      airline: 'JetBlue Airways',
+      flightNumbers: ['B64567', 'B68901', 'B62345'],
+      origins: ['JFK', 'BOS', 'FLL'],
+      destinations: ['LAX', 'SFO', 'SEA'],
+      aircraft: ['Airbus A320', 'Airbus A321', 'Embraer E190'],
+      airlineCode: 'JBU'
     }
   ];
 
@@ -99,7 +129,17 @@ export class FlightService {
 
   public async getFlightData(location: Location): Promise<FlightData[]> {
     try {
-      // Check if we have an API key first
+      // Check if demo mode is enabled
+      if (this.settings.demoMode) {
+        console.log('Demo mode enabled - generating realistic flight data...');
+        const demoFlightData = this.generateDemoFlightData(location);
+        this.lastFlightData = demoFlightData;
+        // Simulate credit usage tracking for demo mode
+        this.trackCreditUsage(demoFlightData.length, this.settings.useFullEndpoint ? 'full' : 'light');
+        return demoFlightData;
+      }
+
+      // Check if we have an API key for real data
       if (!this.apiKeyManager.hasFlightRadar24ApiKey()) {
         // Don't spam the console when no API key is configured
         return [];
@@ -124,11 +164,91 @@ export class FlightService {
     return [];
   }
 
+  private generateDemoFlightData(location: Location): FlightData[] {
+    const flights: FlightData[] = [];
+    const now = new Date();
+    
+    // For demo mode, always generate at least 2 flights for demonstration, up to 5 flights
+    // This ensures the demo mode is useful for showcasing features with good variety
+    const maxFlights = Math.max(Math.min(this.settings.maxFlightsPerRequest, 10), 10);
+    const flightCount = Math.min(Math.floor(Math.random() * 5) + 10, maxFlights); // Generate 2-6 flights for demo
+    
+    console.log(`Demo mode: Generating ${flightCount} flights (max: ${maxFlights})`);
+    
+    for (let i = 0; i < flightCount; i++) {
+      const template = this.demoFlightTemplates[Math.floor(Math.random() * this.demoFlightTemplates.length)];
+      const callsignIndex = Math.floor(Math.random() * template.callsigns.length);
+      
+      // Generate realistic position within radius
+      const radiusInDegrees = this.settings.radiusKm / 111; // Rough conversion to degrees
+      const angle = Math.random() * 2 * Math.PI;
+      const distance = Math.random() * radiusInDegrees;
+      
+      const flightLat = location.latitude + Math.cos(angle) * distance;
+      const flightLng = location.longitude + Math.sin(angle) * distance;
+      
+      // Generate realistic flight data
+      const flight: FlightData = {
+        callsign: template.callsigns[callsignIndex],
+        airline: template.airline,
+        flightNumber: template.flightNumbers[callsignIndex],
+        origin: template.origins[Math.floor(Math.random() * template.origins.length)],
+        destination: template.destinations[Math.floor(Math.random() * template.destinations.length)],
+        aircraft: template.aircraft[Math.floor(Math.random() * template.aircraft.length)],
+        altitude: Math.floor(Math.random() * 20000) + 25000, // 25,000 - 45,000 ft
+        speed: Math.floor(Math.random() * 200) + 400, // 400 - 600 mph
+        heading: Math.floor(Math.random() * 360),
+        latitude: flightLat,
+        longitude: flightLng,
+        status: Math.random() < 0.8 ? 'On Time' : (Math.random() < 0.5 ? 'Delayed' : 'Unknown'),
+        estimatedArrival: new Date(now.getTime() + Math.random() * 8 * 60 * 60 * 1000).toISOString(),
+        flightRadarUrl: `https://www.flightradar24.com/${template.callsigns[callsignIndex]}`,
+        distance: this.calculateDistance(location.latitude, location.longitude, flightLat, flightLng),
+        airlineCode: template.airlineCode,
+        registration: this.generateRegistration(template.airlineCode),
+        aircraftType: template.aircraft[Math.floor(Math.random() * template.aircraft.length)],
+        originIATA: template.origins[Math.floor(Math.random() * template.origins.length)],
+        destinationIATA: template.destinations[Math.floor(Math.random() * template.destinations.length)],
+        eta: new Date(now.getTime() + Math.random() * 6 * 60 * 60 * 1000).toISOString()
+      };
+      
+      flights.push(flight);
+    }
+    
+    // Sort by distance (closest first)
+    const sortedFlights = flights.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+    console.log(`Demo mode: Generated ${sortedFlights.length} flights successfully`);
+    return sortedFlights;
+  }
+
+  private generateRegistration(airlineCode: string): string {
+    // Generate realistic aircraft registration numbers
+    const prefixes = {
+      'UAL': 'N',
+      'AAL': 'N',
+      'DAL': 'N',
+      'SWA': 'N',
+      'JBU': 'N'
+    };
+    
+    const prefix = prefixes[airlineCode as keyof typeof prefixes] || 'N';
+    const digits = Math.floor(Math.random() * 90000) + 10000;
+    const suffix = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + 
+                   String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    
+    return `${prefix}${digits}${suffix}`;
+  }
+
   public async getFlightsInArea(location: Location, radiusKm: number = 50): Promise<FlightData[]> {
     try {
+      // Use demo mode if enabled
+      if (this.settings.demoMode) {
+        return this.generateDemoFlightData(location);
+      }
+      
       // TODO: Implement actual API call to get flights in area
       // This would typically call FlightRadar24 API or similar
-      return this.mockFlights.filter(() => Math.random() < 0.7); // Random subset
+      return [];
     } catch (error) {
       console.error('Error fetching flights in area:', error);
       return [];
@@ -142,22 +262,35 @@ export class FlightService {
         throw new Error('No FlightRadar24 API key available');
       }
 
-      // FlightRadar24 API endpoint for flights in a specific area
-      const response = await axios.get('https://fr24api.flightradar24.com/api/live/flight-positions/full', {
+      // Choose endpoint based on settings (light saves credits: 6 vs 8 per flight)
+      const endpoint = this.settings.useFullEndpoint 
+        ? 'https://fr24api.flightradar24.com/api/live/flight-positions/full'
+        : 'https://fr24api.flightradar24.com/api/live/flight-positions/light';
+      
+      // Calculate bounds based on settings radius
+      const latitudeDegreePerKm = 1 / 111; // Approximate conversion
+      const longitudeDegreePerKm = 1 / (111 * Math.cos(location.latitude * Math.PI / 180));
+      const radiusDegrees = this.settings.radiusKm * Math.max(latitudeDegreePerKm, longitudeDegreePerKm);
+
+      const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Accept': 'application/json',
           'Accept-Version': 'v1'
         },
         params: {
-          // Create a larger bounding box around the user's location (approximately 100km radius)
-          // Format: 'north,south,west,east' coordinates
-          bounds: `${location.latitude + 0.9},${location.latitude - 0.9},${location.longitude - 0.9},${location.longitude + 0.9}`
+          // Create bounding box based on configured radius
+          bounds: `${location.latitude + radiusDegrees},${location.latitude - radiusDegrees},${location.longitude - radiusDegrees},${location.longitude + radiusDegrees}`,
+          // Limit results to save credits
+          limit: this.settings.maxFlightsPerRequest
         },
         timeout: 10000 // 10 second timeout
       });
 
       console.log('FlightRadar24 API response received');
+      
+      // Clear any previous API errors on successful response
+      this.lastApiError = null;
       
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
         // FlightRadar24 live flight positions API returns an array of flights
@@ -165,12 +298,12 @@ export class FlightService {
         
         console.log(`Found ${flights.length} flights in the area`);
         
+        // Track credit usage
+        this.trackCreditUsage(flights.length, this.settings.useFullEndpoint ? 'full' : 'light');
+        
         if (flights.length > 0) {
-          // Debug: log the first flight to see the data structure
-          console.log('Sample flight data structure:', JSON.stringify(flights[0], null, 2));
-          
-          // Find all nearby flights (within 100km) and sort by distance
-          const nearbyFlights = this.findNearbyFlights(flights, location, 100);
+          // Find all nearby flights and sort by distance
+          const nearbyFlights = this.findNearbyFlights(flights, location, this.settings.radiusKm);
           console.log(`Filtered ${nearbyFlights.length} nearby flights from ${flights.length} total`);
           
           if (nearbyFlights.length > 0) {
@@ -185,25 +318,64 @@ export class FlightService {
 
       return [];
     } catch (error) {
-      console.error('FlightRadar24 API error:', error);
+      // console.error('FlightRadar24 API error:', error);
       
       // Check if it's an axios error with response
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const statusText = error.response?.statusText;
+        const responseData = error.response?.data;
         
         console.error(`FlightRadar24 API HTTP Error: ${status} ${statusText}`);
         
         if (status === 401) {
-          console.error('FlightRadar24 API key is invalid or expired');
+          this.lastApiError = {
+            type: 'invalid_key',
+            message: 'Invalid API key',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: 'Your FlightRadar24 API key is invalid or expired. Please check your API key in settings.'
+          };
+        } else if (status === 402) {
+          this.lastApiError = {
+            type: 'payment_required',
+            message: 'Credit limit reached',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: responseData?.details || 'Your FlightRadar24 subscription has run out of credits. Please top up your account or upgrade your plan.'
+          };
         } else if (status === 403) {
-          console.error('FlightRadar24 API key does not have permission for this endpoint');
+          this.lastApiError = {
+            type: 'invalid_key',
+            message: 'Access forbidden',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: 'Your API key does not have permission for this endpoint.'
+          };
         } else if (status === 404) {
-          console.error('FlightRadar24 API endpoint not found - the API URL may be incorrect');
+          this.lastApiError = {
+            type: 'other',
+            message: 'Endpoint not found',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: 'The FlightRadar24 API endpoint was not found. The API URL may be incorrect.'
+          };
         } else if (status === 429) {
-          console.error('FlightRadar24 API rate limit exceeded');
+          this.lastApiError = {
+            type: 'rate_limit',
+            message: 'Rate limit exceeded',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: 'Too many requests. Please wait a moment before trying again.'
+          };
         } else {
-          console.error('FlightRadar24 API returned an unexpected error');
+          this.lastApiError = {
+            type: 'other',
+            message: 'API error',
+            timestamp: Date.now(),
+            statusCode: status,
+            details: statusText || 'An unexpected error occurred with the FlightRadar24 API.'
+          };
         }
         
         // Log response data for debugging
@@ -211,10 +383,16 @@ export class FlightService {
           console.error('API Response:', error.response.data);
         }
       } else {
-        console.error('Network or other error:', error);
+        this.lastApiError = {
+          type: 'network',
+          message: 'Network error',
+          timestamp: Date.now(),
+          details: 'Unable to connect to FlightRadar24 API. Please check your internet connection.'
+        };
       }
       
-      throw error;
+      // Don't throw error, return empty array to allow UI to show error message
+      return [];
     }
   }
 
@@ -502,5 +680,86 @@ export class FlightService {
 
   public getLastFlightData(): FlightData[] {
     return this.lastFlightData;
+  }
+
+  // Credit usage tracking
+  private trackCreditUsage(flightsReturned: number, endpoint: 'full' | 'light'): void {
+    // Credit costs per flight based on FlightRadar24 pricing
+    const creditCosts = {
+      'full': 8,   // Live flight positions - full: 8 credits per flight
+      'light': 6   // Live flight positions - light: 6 credits per flight
+    };
+
+    const creditsUsed = flightsReturned * creditCosts[endpoint];
+    const estimatedCost = creditsUsed * 0.0003; // $0.0003 per credit
+
+    const usage: CreditUsage = {
+      creditsUsed,
+      flightsReturned,
+      endpoint: `live-flight-positions-${endpoint}`,
+      timestamp: Date.now(),
+      estimatedCost
+    };
+
+    this.creditUsageHistory.push(usage);
+    
+    // Keep only last 100 entries to avoid memory issues
+    if (this.creditUsageHistory.length > 100) {
+      this.creditUsageHistory = this.creditUsageHistory.slice(-100);
+    }
+
+    console.log(`Credit usage: ${creditsUsed} credits for ${flightsReturned} flights (${endpoint} endpoint) - Est. cost: $${estimatedCost.toFixed(4)}`);
+  }
+
+  // Settings management
+  public getSettings(): FlightServiceSettings {
+    return { ...this.settings };
+  }
+
+  public updateSettings(newSettings: Partial<FlightServiceSettings>): void {
+    this.settings = { ...this.settings, ...newSettings };
+    console.log('FlightService settings updated:', this.settings);
+  }
+
+  // Credit usage analytics
+  public getCreditUsageHistory(): CreditUsage[] {
+    return [...this.creditUsageHistory];
+  }
+
+  public getDailyCreditUsage(): number {
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    return this.creditUsageHistory
+      .filter(usage => usage.timestamp > oneDayAgo)
+      .reduce((total, usage) => total + usage.creditsUsed, 0);
+  }
+
+  public getHourlyCreditUsage(): number {
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    return this.creditUsageHistory
+      .filter(usage => usage.timestamp > oneHourAgo)
+      .reduce((total, usage) => total + usage.creditsUsed, 0);
+  }
+
+  public estimateMonthlyCredits(): number {
+    const hourlyUsage = this.getHourlyCreditUsage();
+    if (hourlyUsage === 0) {
+      // Estimate based on settings if no usage data
+      const requestsPerHour = 60 / this.settings.refreshIntervalMinutes;
+      const creditsPerRequest = this.settings.maxFlightsPerRequest * (this.settings.useFullEndpoint ? 8 : 6);
+      return requestsPerHour * creditsPerRequest * 24 * 30; // 30 days
+    }
+    return hourlyUsage * 24 * 30; // 30 days
+  }
+
+  public getRefreshIntervalMs(): number {
+    return this.settings.refreshIntervalMinutes * 60 * 1000;
+  }
+
+  public getLastApiError(): ApiError | null {
+    return this.lastApiError;
+  }
+
+  public clearApiError(): void {
+    this.lastApiError = null;
   }
 } 
