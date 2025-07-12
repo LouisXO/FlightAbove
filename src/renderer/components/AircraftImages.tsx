@@ -79,6 +79,11 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
     }
   }, [registration]);
 
+  // Reset currentIndex when images change
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [images]);
+
   // Track if the current image failed to load
   const [imageError, setImageError] = useState(false);
 
@@ -107,7 +112,11 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
     return <div className="aircraft-images-empty">No images available</div>;
   }
 
+  // Defensive check to ensure currentImage exists
   const currentImage = images[currentIndex];
+  if (!currentImage) {
+    return <div className="aircraft-images-empty">No images available</div>;
+  }
 
   return (
     <div className="aircraft-images-container">
