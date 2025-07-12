@@ -48,7 +48,9 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
         // Check cache first
         const cachedData = imageCache[registration];
         if (cachedData && (Date.now() - cachedData.timestamp < CACHE_TTL)) {
-          setImages(cachedData.images);
+          // Filter out invalid images from cache
+          const validImages = (cachedData.images || []).filter(img => img.Image && img.Image.startsWith('http'));
+          setImages(validImages);
           setLoading(false);
           return; // Use cached data
         }
@@ -58,7 +60,8 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
           throw new Error('Failed to fetch aircraft images');
         }
         const data: ApiResponse = await response.json();
-        const fetchedImages = data.Images || [];
+        // Filter out images with missing or invalid URLs
+        const fetchedImages = (data.Images || []).filter(img => img.Image && img.Image.startsWith('http'));
         setImages(fetchedImages);
         
         // Store in cache with current timestamp
@@ -75,6 +78,14 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
       fetchImages();
     }
   }, [registration]);
+
+  // Track if the current image failed to load
+  const [imageError, setImageError] = useState(false);
+
+  // Reset image error when changing images
+  useEffect(() => {
+    setImageError(false);
+  }, [currentIndex, images]);
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % images.length);
@@ -105,11 +116,16 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <img 
-          src={currentImage.Image} 
-          alt={`Aircraft ${registration}`}
-          className="aircraft-image"
-        />
+        {!imageError ? (
+          <img 
+            src={currentImage.Image} 
+            alt={`Aircraft ${registration}`}
+            className="aircraft-image"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="aircraft-images-empty">Image unavailable</div>
+        )}
         {/* Overlay description only on hover */}
         <div className={`image-info${hovered ? ' show' : ''}`}>
           <p className="image-info-line">{currentImage.Location}</p>
@@ -117,7 +133,7 @@ export const AircraftImages = ({ registration }: AircraftImagesProps) => {
           <p className="image-info-line">{currentImage.Photographer}</p>
         </div>
         {/* Arrow controls on the image */}
-        {images.length > 1 && (
+        {images.length > 1 && !imageError && (
           <>
             <button 
               className={`image-arrow left${hovered ? ' show' : ''}`}

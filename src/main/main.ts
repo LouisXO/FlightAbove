@@ -274,6 +274,7 @@ const createMenuBar = () => {
     browserWindow: {
       width: 600,
       height: 900,
+      show: false, // <-- Add this line
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -362,6 +363,11 @@ const createMenuBar = () => {
     //   }
     // });
     
+    // Only show when ready
+    mb.window?.once('ready-to-show', () => {
+      mb.showWindow();
+    });
+
     // Send initial flight data when window is ready
     mb.window?.webContents.once('did-finish-load', () => {
       if (mb.window) {

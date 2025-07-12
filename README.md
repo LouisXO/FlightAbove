@@ -1,5 +1,14 @@
 # FlightAbove
 
+[![Build](https://img.shields.io/github/actions/workflow/status/LouisXO/FlightAbove/main.yml?branch=main&label=build)](https://github.com/LouisXO/FlightAbove/actions)
+[![License](https://img.shields.io/github/license/LouisXO/FlightAbove)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/LouisXO/FlightAbove?include_prereleases)](https://github.com/LouisXO/FlightAbove/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS-blue)](https://www.apple.com/macos/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LouisXO/FlightAbove/pulls)
+[![Issues](https://img.shields.io/github/issues/LouisXO/FlightAbove)](https://github.com/LouisXO/FlightAbove/issues)
+[![Stars](https://img.shields.io/github/stars/LouisXO/FlightAbove?style=social)](https://github.com/LouisXO/FlightAbove/stargazers)
+[![Forks](https://img.shields.io/github/forks/LouisXO/FlightAbove?style=social)](https://github.com/LouisXO/FlightAbove/network/members)
+
 A modern macOS menu bar application that displays nearby aircraft with real-time flight information, comprehensive credit management, and a beautiful interface designed for aviation enthusiasts.
 
 ![FlightAbove Main App](assets/main_app.jpg)
@@ -267,12 +276,16 @@ DEBUG=flight-above npm start
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🙏 Acknowledgements
 
-- **FlightRadar24**: Real-time flight data API
-- **Airline Logos**: Various airlines for branding assets
-- **Open Source Community**: Libraries and tools that make this possible
-- **Aviation Community**: Inspiration and feedback
+FlightAbove uses data and assets from the following services:
+
+- [JetAPI](https://github.com/macsencasaus/jetapi): For providing aircraft image data.
+- [JetPhotos.com](https://www.jetphotos.com/): The primary source for the aircraft images displayed via JetAPI.
+- [FlightRadarAPI](https://github.com/JeanExtreme002/FlightRadarAPI?tab=readme-ov-file): For real-time flight tracking data.
+- [Airline Repo](https://github.com/dotmarn/Airlines): For airline logo data.
+- Open Source Community: For the various libraries and tools that make this project possible.
+- Aviation Community: For inspiration and valuable feedback.
 
 ---
 
