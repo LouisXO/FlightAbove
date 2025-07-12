@@ -1,6 +1,6 @@
 # FlightAbove
 
-[![Build](https://img.shields.io/github/actions/workflow/status/LouisXO/FlightAbove/main.yml?branch=main&label=build)](https://github.com/LouisXO/FlightAbove/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/LouisXO/FlightAbove/ci.yml?branch=main&label=build)](https://github.com/LouisXO/FlightAbove/actions)
 [![License](https://img.shields.io/github/license/LouisXO/FlightAbove)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/LouisXO/FlightAbove?include_prereleases)](https://github.com/LouisXO/FlightAbove/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS-blue)](https://www.apple.com/macos/)
