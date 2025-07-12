@@ -24,11 +24,17 @@ FlightAbove transforms your Mac's menu bar into a sophisticated aviation radar, 
 - **Live Distance Calculation**: Shows exact distance to each aircraft with precision
 - **Ultra-Fast Updates**: Configurable refresh intervals (1-60 minutes) including real-time 1-minute tracking
 
+### 📸 Aircraft Image Display
+- **Visual Aircraft Data**: Displays real-world images of detected aircraft fetched from JetAPI.
+- **Interactive Carousel**: Navigate through multiple available images for a selected aircraft.
+- **Contextual Information**: Image overlay shows location, date, and photographer on hover.
+- **Clean UI**: Integrated navigation arrows and compact details provide a seamless viewing experience.
+
 ### 🎮 Demo Mode
-- **Realistic Simulation**: Generate authentic flight data
-- **Perfect for Testing**: Showcase features and test functionality
-- **Full Feature Access**: Complete functionality testing
-- **Multiple Aircraft**: Demonstrates navigation with 2-4+ realistic flights
+- **Realistic Simulation**: Generates authentic flight data with *real aircraft registrations*.
+- **Perfect for Testing**: Showcase features and test functionality without needing API keys.
+- **Full Feature Access**: Complete functionality testing, including actual image fetching from the API.
+- **Multiple Aircraft**: Demonstrates navigation with 2-4+ realistic flights.
 
 ### 🎯 Rich Flight Information
 - **Comprehensive Data**: Flight number, airline, origin/destination airports (IATA codes)
@@ -181,6 +187,9 @@ Monitor your API usage:
 - **Casual User**: Light settings for minimal resource usage
 - **Regular User**: Balanced settings for good performance
 - **Power User**: Performance settings for maximum data
+
+### Data Caching
+- **In-memory Caching with TTL**: Efficiently caches aircraft image data for 5 minutes, reducing redundant API calls and improving load times.
 
 ## 🔍 Troubleshooting
 

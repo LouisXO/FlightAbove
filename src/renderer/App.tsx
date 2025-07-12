@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import SettingsPanel from './components/SettingsPanel';
+import { AircraftImages } from './components/AircraftImages';
 
 // TypeScript interface declarations
 interface ApiError {
@@ -417,8 +418,14 @@ const App: React.FC = () => {
             className="destination"
           />
         </div>
+        {currentFlight && currentFlight.registration && (
+          <div className="flight-images">
+            <AircraftImages registration={currentFlight.registration} />
+          </div>
+        )}
         
         <div className="flight-details">
+          
           <div className="detail-item">
             <span className="detail-label">Distance:</span>
             <span className="detail-value">

@@ -77,6 +77,7 @@ export class FlightService {
       origins: ['LAX', 'SFO', 'DEN'],
       destinations: ['JFK', 'ORD', 'IAH'],
       aircraft: ['Boeing 737-800', 'Boeing 777-200', 'Airbus A320'],
+      registrations: ['N76505', 'N78002', 'N401UA'], // Added real registrations
       airlineCode: 'UAL'
     },
     {
@@ -86,6 +87,7 @@ export class FlightService {
       origins: ['DFW', 'MIA', 'PHX'],
       destinations: ['ORD', 'BOS', 'LGA'],
       aircraft: ['Airbus A320', 'Boeing 737-800', 'Boeing 777-300'],
+      registrations: ['N901NN', 'N898NN', 'N720AN'], // Added real registrations
       airlineCode: 'AAL'
     },
     {
@@ -95,6 +97,7 @@ export class FlightService {
       origins: ['ATL', 'MSP', 'DTW'],
       destinations: ['SEA', 'LAX', 'JFK'],
       aircraft: ['Boeing 757-200', 'Airbus A330', 'Boeing 737-900'],
+      registrations: ['N67069', 'N801NW', 'N801DN'], // Added real registrations
       airlineCode: 'DAL'
     },
     {
@@ -104,6 +107,7 @@ export class FlightService {
       origins: ['MDW', 'BWI', 'LAS'],
       destinations: ['LAX', 'DEN', 'PHX'],
       aircraft: ['Boeing 737-700', 'Boeing 737-800', 'Boeing 737 MAX 8'],
+      registrations: ['N750SW', 'N8765Q', 'N8701M'], // Added real registrations
       airlineCode: 'SWA'
     },
     {
@@ -113,6 +117,7 @@ export class FlightService {
       origins: ['JFK', 'BOS', 'FLL'],
       destinations: ['LAX', 'SFO', 'SEA'],
       aircraft: ['Airbus A320', 'Airbus A321', 'Embraer E190'],
+      registrations: ['N503JB', 'N992JB', 'N203JB'], // Added real registrations
       airlineCode: 'JBU'
     }
   ];
@@ -176,7 +181,9 @@ export class FlightService {
     for (let i = 0; i < flightCount; i++) {
       const template = this.demoFlightTemplates[Math.floor(Math.random() * this.demoFlightTemplates.length)];
       const callsignIndex = Math.floor(Math.random() * template.callsigns.length);
-      
+      const aircraftIndex = Math.floor(Math.random() * template.aircraft.length);
+      const registration = template.registrations[aircraftIndex]; // Select registration based on aircraft index
+
       // Generate realistic position within radius
       const radiusInDegrees = this.settings.radiusKm / 111; // Rough conversion to degrees
       const angle = Math.random() * 2 * Math.PI;
@@ -192,7 +199,7 @@ export class FlightService {
         flightNumber: template.flightNumbers[callsignIndex],
         origin: template.origins[Math.floor(Math.random() * template.origins.length)],
         destination: template.destinations[Math.floor(Math.random() * template.destinations.length)],
-        aircraft: template.aircraft[Math.floor(Math.random() * template.aircraft.length)],
+        aircraft: template.aircraft[aircraftIndex],
         altitude: Math.floor(Math.random() * 20000) + 25000, // 25,000 - 45,000 ft
         speed: Math.floor(Math.random() * 200) + 400, // 400 - 600 mph
         heading: Math.floor(Math.random() * 360),
@@ -203,8 +210,8 @@ export class FlightService {
         flightRadarUrl: `https://www.flightradar24.com/${template.callsigns[callsignIndex]}`,
         distance: this.calculateDistance(location.latitude, location.longitude, flightLat, flightLng),
         airlineCode: template.airlineCode,
-        registration: this.generateRegistration(template.airlineCode),
-        aircraftType: template.aircraft[Math.floor(Math.random() * template.aircraft.length)],
+        registration: registration, // Use the selected real registration
+        aircraftType: template.aircraft[aircraftIndex],
         originIATA: template.origins[Math.floor(Math.random() * template.origins.length)],
         destinationIATA: template.destinations[Math.floor(Math.random() * template.destinations.length)],
         eta: new Date(now.getTime() + Math.random() * 6 * 60 * 60 * 1000).toISOString()
@@ -220,7 +227,8 @@ export class FlightService {
   }
 
   private generateRegistration(airlineCode: string): string {
-    // Generate realistic aircraft registration numbers
+    // This function is no longer needed as registrations are now pre-defined in templates
+    // However, keeping it as a fallback or if dynamic generation is preferred for other scenarios
     const prefixes = {
       'UAL': 'N',
       'AAL': 'N',

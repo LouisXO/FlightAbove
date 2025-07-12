@@ -15,9 +15,9 @@ body {
 }
 
 .app {
-  width: 450px;
-  max-width: 450px;
-  min-width: 450px;
+  width: 550px;
+  max-width: 550px;
+  min-width: 550px;
   min-height: 150px;
   background: #ffffff;
   border-radius: 16px;

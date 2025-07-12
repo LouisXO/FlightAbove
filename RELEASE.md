@@ -1,146 +1,83 @@
-# FlightAbove Release Guide
+# FlightAbove v1.0.0 Release Notes
 
-This guide explains how to build and distribute FlightAbove DMG files for macOS.
+## 🚀 First Official Release
 
-## 🚀 Quick Build
+FlightAbove is now available as a modern macOS menu bar application that displays nearby aircraft with real-time flight information and a beautiful interface designed for aviation enthusiasts.
 
-To build production-ready DMG files for distribution:
+### 📦 Downloads
 
-```bash
-npm run build:dmg
-```
+- **Intel Mac (x64)**: `FlightAbove-1.0.0.dmg`
+- **Apple Silicon (arm64)**: `FlightAbove-1.0.0-arm64.dmg`
 
-This will create:
-- `FlightAbove-1.0.0.dmg` (Intel x64)
-- `FlightAbove-1.0.0-arm64.dmg` (Apple Silicon)
+### ✨ Features
 
-## 📦 Build Options
+- **Real-Time Flight Tracking**
+  - Smart flight detection within configurable radius (10-50km)
+  - Multiple flight navigation with elegant controls
+  - Live distance calculation to each aircraft
+  - Configurable refresh intervals (1-60 minutes)
 
-### Method 1: Automated Script (Recommended)
-```bash
-npm run build:dmg
-```
-Uses the `scripts/build-dmg.sh` script to handle everything automatically.
+- **Rich Flight Information**
+  - Comprehensive flight details (number, airline, airports)
+  - Full aircraft information (type, registration)
+  - Real-time status updates
+  - Interactive airport code tooltips
 
-### Method 2: Manual Build Process
-```bash
-# Build the application
-npm run build
+- **Airline Integration**
+  - 1,224+ airlines with professional logos
+  - Global carrier coverage
+  - Smart fallback handling
+  - Automatic logo caching
 
-# Package for both architectures
-npm run package:all
+- **Modern macOS Experience**
+  - Native menu bar integration
+  - Clean, minimalist interface
+  - Transparent background with elegant cards
+  - Smooth animations and transitions
 
-# Create DMG files
-npm run dmg:create
-```
+- **Advanced Configuration**
+  - Intuitive settings panel
+  - Customizable refresh rates
+  - Adjustable search radius
+  - Performance optimization options
 
-### Method 3: Individual Commands
-```bash
-# Build TypeScript and React
-npm run build:main
-npm run build:renderer
+### 🔧 System Requirements
 
-# Package for specific architecture
-npm run package:x64    # Intel x64
-npm run package:arm64  # Apple Silicon
+- macOS 10.14 or later
+- Internet connection
+- 100MB free disk space
+- Location services (IP-based)
 
-# Create specific DMG
-npm run dmg:x64
-npm run dmg:arm64
-```
+### 🎯 Installation
 
-## 📂 Output Files
+1. Download the appropriate DMG for your Mac:
+   - Intel Mac: `FlightAbove-1.0.0.dmg`
+   - Apple Silicon: `FlightAbove-1.0.0-arm64.dmg`
+2. Open the DMG file
+3. Drag FlightAbove to your Applications folder
+4. Launch FlightAbove from Applications
 
-All build artifacts are created in the `release/` directory:
+### 🐛 Known Issues
 
-```
-release/
-├── FlightAbove-1.0.0.dmg           # Intel x64 DMG
-├── FlightAbove-1.0.0-arm64.dmg     # Apple Silicon DMG
-├── FlightAbove-darwin-x64/         # Unpacked Intel app
-│   └── FlightAbove.app
-└── FlightAbove-darwin-arm64/       # Unpacked Apple Silicon app
-    └── FlightAbove.app
-```
+- Initial startup may take a few seconds while caching airline logos
+- Menu bar icon may need a refresh after system sleep
+- Search radius above 200km may impact performance
 
-## 🔧 Development vs Production
+### 🔜 Coming Soon
 
-### Development
-```bash
-npm run dev  # Starts development server with hot reloading
-```
+- Customizable notifications
+- Flight path visualization
+- Historical flight data
+- Additional aircraft details
+- Performance optimizations
 
-### Production Testing
-```bash
-npm run build  # Build for production
-npm start      # Run built app
-```
+### 🙏 Acknowledgments
 
-## 🧹 Cleaning
-
-```bash
-npm run clean  # Remove dist/ and release/ directories
-```
-
-## 📋 System Requirements
-
-- **macOS**: 10.14 or later
-- **Node.js**: 16 or later
-- **npm**: 8 or later
-
-## 🎯 Distribution
-
-The generated DMG files can be distributed directly to users:
-
-1. **FlightAbove-1.0.0.dmg** - For Intel Macs (x64)
-2. **FlightAbove-1.0.0-arm64.dmg** - For Apple Silicon Macs (M1/M2/M3)
-
-Users can:
-1. Download the appropriate DMG for their system
-2. Double-click to mount the disk image
-3. Drag FlightAbove.app to Applications folder
-4. Launch from Applications or Spotlight
-
-## 🛠️ Troubleshooting
-
-### Build Fails
-- Ensure all dependencies are installed: `npm install`
-- Clean previous builds: `npm run clean`
-- Check Node.js version: `node --version`
-
-### Network Issues with electron-builder
-If `npm run dist` fails due to network issues, use:
-```bash
-npm run build:dmg  # Uses electron-packager instead
-```
-
-### DMG Creation Fails
-- Ensure you're on macOS (hdiutil is required)
-- Check available disk space
-- Verify app was packaged correctly in `release/` directory
-
-## 📝 Version Updates
-
-To update the version:
-1. Update `package.json` version field
-2. Update DMG names in `scripts/build-dmg.sh`
-3. Update version in this documentation
-4. Rebuild: `npm run build:dmg`
-
-## 🔒 Code Signing (Optional)
-
-For distribution outside the App Store, you may want to code sign:
-```bash
-codesign --sign "Developer ID Application: Your Name" release/FlightAbove-darwin-x64/FlightAbove.app
-```
-
-## 🎉 Final Steps
-
-1. Test both DMG files on different Mac architectures
-2. Verify app launches correctly after installation
-3. Check all features work as expected
-4. Upload to your distribution platform or website
+Special thanks to:
+- The aviation community for valuable feedback
+- Open source contributors
+- Beta testers for their insights
 
 ---
 
-**Note**: The automated build script (`npm run build:dmg`) is the recommended approach as it handles all steps, cleanup, and provides clear progress feedback. 
+For more information, visit the [GitHub repository](https://github.com/LouisXO/FlightAbove). 

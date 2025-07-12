@@ -272,8 +272,8 @@ const createMenuBar = () => {
     icon: transparentIcon, // Use transparent icon to avoid default cat
     tooltip: 'FlightAbove - Current flights overhead',
     browserWindow: {
-      width: 500,
-      height: 600,
+      width: 600,
+      height: 900,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -356,11 +356,11 @@ const createMenuBar = () => {
     });
     
     // Hide window when it loses focus (clicking away)
-    mb.window?.on('blur', () => {
-      if (mb.window) {
-        mb.hideWindow();
-      }
-    });
+    // mb.window?.on('blur', () => {
+    //   if (mb.window) {
+    //     mb.hideWindow();
+    //   }
+    // });
     
     // Send initial flight data when window is ready
     mb.window?.webContents.once('did-finish-load', () => {
