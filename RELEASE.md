@@ -1,4 +1,4 @@
-# FlightAbove 1.0.1
+# FlightAbove 1.0.2
 
 ## 📦 What's New
 
@@ -8,8 +8,8 @@
 ## 🔧 Installation
 
 1. Download the appropriate DMG for your Mac:
-   - Intel Mac (x64): `FlightAbove-1.0.1.dmg`
-   - Apple Silicon: `FlightAbove-1.0.1-arm64.dmg`
+   - Intel Mac (x64): `FlightAbove-1.0.2.dmg`
+   - Apple Silicon: `FlightAbove-1.0.2-arm64.dmg`
 2. Open the DMG file
 3. Drag FlightAbove to your Applications folder
 4. Launch from Applications

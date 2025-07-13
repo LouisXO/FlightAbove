@@ -1,6 +1,6 @@
 {
   "name": "flight-above",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A Mac menu bar app that displays current flights overhead",
   "main": "dist/main/main.js",
   "scripts": {
@@ -25,7 +25,9 @@
     "clean": "rimraf dist release",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "postinstall": "npm run fix-deps",
+    "fix-deps": "node -e \"try { require('fs').rmSync('node_modules/flightradarapi/node_modules', { recursive: true, force: true }); console.log('Fixed flightradarapi dependencies'); } catch(e) { console.log('No nested node_modules to fix'); }\""
   },
   "keywords": [
     "electron",
@@ -71,7 +73,8 @@
     },
     "files": [
       "dist/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "node_modules/**/*"
     ],
     "mac": {
       "category": "public.app-category.utilities",
@@ -84,6 +87,10 @@
         ]
       }
     },
-    "publish": null
+    "publish": null,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/flightradarapi/**/*"
+    ]
   }
 }
