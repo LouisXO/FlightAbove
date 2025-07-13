@@ -1,6 +1,6 @@
 {
   "name": "flight-above",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Mac menu bar app that displays current flights overhead",
   "main": "dist/main/main.js",
   "scripts": {
@@ -20,10 +20,12 @@
     "package:x64": "electron-packager . FlightAbove --platform=darwin --arch=x64 --out=release --overwrite --icon=assets/icon.jpg",
     "package:arm64": "electron-packager . FlightAbove --platform=darwin --arch=arm64 --out=release --overwrite --icon=assets/icon.jpg",
     "dmg:create": "npm run dmg:x64 && npm run dmg:arm64",
-    "dmg:x64": "mkdir -p release/dmg && cp -r release/FlightAbove-darwin-x64/FlightAbove.app release/dmg/ && hdiutil create -volname 'FlightAbove' -srcfolder release/dmg -ov -format UDZO release/FlightAbove-1.0.0.dmg",
-    "dmg:arm64": "mkdir -p release/dmg-arm64 && cp -r release/FlightAbove-darwin-arm64/FlightAbove.app release/dmg-arm64/ && hdiutil create -volname 'FlightAbove' -srcfolder release/dmg-arm64 -ov -format UDZO release/FlightAbove-1.0.0-arm64.dmg",
+    "dmg:x64": "mkdir -p release/dmg && cp -r release/FlightAbove-darwin-x64/FlightAbove.app release/dmg/ && hdiutil create -volname 'FlightAbove' -srcfolder release/dmg -ov -format UDZO release/FlightAbove-1.0.1.dmg",
+    "dmg:arm64": "mkdir -p release/dmg-arm64 && cp -r release/FlightAbove-darwin-arm64/FlightAbove.app release/dmg-arm64/ && hdiutil create -volname 'FlightAbove' -srcfolder release/dmg-arm64 -ov -format UDZO release/FlightAbove-1.0.1-arm64.dmg",
     "clean": "rimraf dist release",
-    "build:dmg": "./scripts/build-dmg.sh"
+    "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
     "electron",
