@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
     runs-on: macos-latest
@@ -128,6 +132,9 @@ jobs:
   manual-release:
     runs-on: macos-latest
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
         with:
