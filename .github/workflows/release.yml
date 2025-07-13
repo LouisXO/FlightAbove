@@ -42,84 +42,88 @@ jobs:
       - name: Check if release exists
         id: check-release
         run: |
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }} --jq '.id' 2>/dev/null || echo "")
+          RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }}" | \
+            jq -r '.id // empty' 2>/dev/null || echo "")
           if [ -n "$RELEASE_ID" ]; then
             echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
             echo "release_exists=true" >> $GITHUB_OUTPUT
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Create new release
         if: steps.check-release.outputs.release_exists == 'false'
         run: |
-          gh release create v${{ steps.version.outputs.version }} \
-            --title "FlightAbove ${{ steps.version.outputs.version }}" \
-            --notes "## FlightAbove ${{ steps.version.outputs.version }}
+          # Create release using GitHub API
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d '{
+              "tag_name": "v${{ steps.version.outputs.version }}",
+              "name": "FlightAbove ${{ steps.version.outputs.version }}",
+              "body": "## FlightAbove ${{ steps.version.outputs.version }}\n\n### 📦 What'\''s New\n- Bug fixes and improvements\n- Enhanced performance and stability\n\n### 🔧 Installation\n1. Download the appropriate DMG for your Mac:\n   - Intel Mac (x64): `FlightAbove-${{ steps.version.outputs.version }}.dmg`\n   - Apple Silicon: `FlightAbove-${{ steps.version.outputs.version }}-arm64.dmg`\n2. Open the DMG file\n3. Drag FlightAbove to your Applications folder\n4. Launch from Applications\n\n### 📋 System Requirements\n- macOS 10.14 or later\n- Internet connection\n- 100MB free disk space\n\nFor complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)",
+              "draft": false,
+              "prerelease": false
+            }'
           
-          ### 📦 What's New
-          - Bug fixes and improvements
-          - Enhanced performance and stability
-          
-          ### 🔧 Installation
-          1. Download the appropriate DMG for your Mac:
-             - Intel Mac (x64): \`FlightAbove-${{ steps.version.outputs.version }}.dmg\`
-             - Apple Silicon: \`FlightAbove-${{ steps.version.outputs.version }}-arm64.dmg\`
-          2. Open the DMG file
-          3. Drag FlightAbove to your Applications folder
-          4. Launch from Applications
-          
-          ### 📋 System Requirements
-          - macOS 10.14 or later
-          - Internet connection
-          - 100MB free disk space
-          
-          For complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)" \
-            release/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Upload DMG files
+          for file in release/*.dmg; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary "@$file" \
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ steps.version.outputs.version }}/assets?name=$filename"
+            fi
+          done
       
       - name: Update existing release
         if: steps.check-release.outputs.release_exists == 'true'
         run: |
+          # Get existing assets
+          ASSETS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.check-release.outputs.release_id }}/assets" | \
+            jq -r '.[].id')
+          
           # Delete existing assets
-          gh api repos/${{ github.repository }}/releases/${{ steps.check-release.outputs.release_id }}/assets | \
-            jq -r '.[].id' | \
-            xargs -I {} gh api repos/${{ github.repository }}/releases/assets/{} -X DELETE
+          for asset_id in $ASSETS; do
+            if [ -n "$asset_id" ]; then
+              echo "Deleting asset $asset_id..."
+              curl -X DELETE \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                "https://api.github.com/repos/${{ github.repository }}/releases/assets/$asset_id"
+            fi
+          done
           
           # Upload new assets
-          gh release upload v${{ steps.version.outputs.version }} release/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          for file in release/*.dmg; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary "@$file" \
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ steps.version.outputs.version }}/assets?name=$filename"
+            fi
+          done
       
-      - name: Create release comment
+      - name: Update release notes
         if: steps.check-release.outputs.release_exists == 'true'
         run: |
-          gh release edit v${{ steps.version.outputs.version }} \
-            --notes "## FlightAbove ${{ steps.version.outputs.version }} (Updated)
-          
-          ### 📦 What's New
-          - Bug fixes and improvements
-          - Enhanced performance and stability
-          
-          ### 🔧 Installation
-          1. Download the appropriate DMG for your Mac:
-             - Intel Mac (x64): \`FlightAbove-${{ steps.version.outputs.version }}.dmg\`
-             - Apple Silicon: \`FlightAbove-${{ steps.version.outputs.version }}-arm64.dmg\`
-          2. Open the DMG file
-          3. Drag FlightAbove to your Applications folder
-          4. Launch from Applications
-          
-          ### 📋 System Requirements
-          - macOS 10.14 or later
-          - Internet connection
-          - 100MB free disk space
-          
-          For complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.check-release.outputs.release_id }}" \
+            -d '{
+              "body": "## FlightAbove ${{ steps.version.outputs.version }} (Updated)\n\n### 📦 What'\''s New\n- Bug fixes and improvements\n- Enhanced performance and stability\n\n### 🔧 Installation\n1. Download the appropriate DMG for your Mac:\n   - Intel Mac (x64): `FlightAbove-${{ steps.version.outputs.version }}.dmg`\n   - Apple Silicon: `FlightAbove-${{ steps.version.outputs.version }}-arm64.dmg`\n2. Open the DMG file\n3. Drag FlightAbove to your Applications folder\n4. Launch from Applications\n\n### 📋 System Requirements\n- macOS 10.14 or later\n- Internet connection\n- 100MB free disk space\n\nFor complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)"
+            }'
 
   manual-release:
     runs-on: macos-latest
@@ -150,31 +154,32 @@ jobs:
       
       - name: Create release
         run: |
-          gh release create v${{ github.event.inputs.version }} \
-            --title "FlightAbove ${{ github.event.inputs.version }}" \
-            --notes "## FlightAbove ${{ github.event.inputs.version }}
+          # Create release using GitHub API
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d '{
+              "tag_name": "v${{ github.event.inputs.version }}",
+              "name": "FlightAbove ${{ github.event.inputs.version }}",
+              "body": "## FlightAbove ${{ github.event.inputs.version }}\n\n### 📦 What'\''s New\n- Bug fixes and improvements\n- Enhanced performance and stability\n\n### 🔧 Installation\n1. Download the appropriate DMG for your Mac:\n   - Intel Mac (x64): `FlightAbove-${{ github.event.inputs.version }}.dmg`\n   - Apple Silicon: `FlightAbove-${{ github.event.inputs.version }}-arm64.dmg`\n2. Open the DMG file\n3. Drag FlightAbove to your Applications folder\n4. Launch from Applications\n\n### 📋 System Requirements\n- macOS 10.14 or later\n- Internet connection\n- 100MB free disk space\n\nFor complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)",
+              "draft": false,
+              "prerelease": false
+            }'
           
-          ### 📦 What's New
-          - Bug fixes and improvements
-          - Enhanced performance and stability
-          
-          ### 🔧 Installation
-          1. Download the appropriate DMG for your Mac:
-             - Intel Mac (x64): \`FlightAbove-${{ github.event.inputs.version }}.dmg\`
-             - Apple Silicon: \`FlightAbove-${{ github.event.inputs.version }}-arm64.dmg\`
-          2. Open the DMG file
-          3. Drag FlightAbove to your Applications folder
-          4. Launch from Applications
-          
-          ### 📋 System Requirements
-          - macOS 10.14 or later
-          - Internet connection
-          - 100MB free disk space
-          
-          For complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)" \
-            release/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Upload DMG files
+          for file in release/*.dmg; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary "@$file" \
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ github.event.inputs.version }}/assets?name=$filename"
+            fi
+          done
       
       - name: Commit version update
         run: |
