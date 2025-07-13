@@ -287,6 +287,12 @@ FlightAbove uses data and assets from the following services:
 - Open Source Community: For the various libraries and tools that make this project possible.
 - Aviation Community: For inspiration and valuable feedback.
 
+## ☕ Support
+
+If you enjoy FlightAbove and would like to support its development, consider buying me a coffee:
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/louisleng)
+
 ---
 
 **Made with ❤️ for aviation enthusiasts worldwide**
