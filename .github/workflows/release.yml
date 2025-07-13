@@ -60,7 +60,7 @@ jobs:
         if: steps.check-release.outputs.release_exists == 'false'
         run: |
           # Create release using GitHub API
-          curl -X POST \
+          RELEASE_RESPONSE=$(curl -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" \
@@ -70,7 +70,11 @@ jobs:
               "body": "## FlightAbove ${{ steps.version.outputs.version }}\n\n### 📦 What'\''s New\n- Bug fixes and improvements\n- Enhanced performance and stability\n\n### 🔧 Installation\n1. Download the appropriate DMG for your Mac:\n   - Intel Mac (x64): `FlightAbove-${{ steps.version.outputs.version }}.dmg`\n   - Apple Silicon: `FlightAbove-${{ steps.version.outputs.version }}-arm64.dmg`\n2. Open the DMG file\n3. Drag FlightAbove to your Applications folder\n4. Launch from Applications\n\n### 📋 System Requirements\n- macOS 10.14 or later\n- Internet connection\n- 100MB free disk space\n\nFor complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)",
               "draft": false,
               "prerelease": false
-            }'
+            }')
+          
+          # Extract release ID from response
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          echo "Created release with ID: $RELEASE_ID"
           
           # Upload DMG files
           for file in release/*.dmg; do
@@ -82,7 +86,7 @@ jobs:
                 -H "Accept: application/vnd.github.v3+json" \
                 -H "Content-Type: application/octet-stream" \
                 --data-binary "@$file" \
-                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ steps.version.outputs.version }}/assets?name=$filename"
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$filename"
             fi
           done
       
@@ -114,7 +118,7 @@ jobs:
                 -H "Accept: application/vnd.github.v3+json" \
                 -H "Content-Type: application/octet-stream" \
                 --data-binary "@$file" \
-                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ steps.version.outputs.version }}/assets?name=$filename"
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ steps.check-release.outputs.release_id }}/assets?name=$filename"
             fi
           done
       
@@ -162,7 +166,7 @@ jobs:
       - name: Create release
         run: |
           # Create release using GitHub API
-          curl -X POST \
+          RELEASE_RESPONSE=$(curl -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" \
@@ -172,7 +176,11 @@ jobs:
               "body": "## FlightAbove ${{ github.event.inputs.version }}\n\n### 📦 What'\''s New\n- Bug fixes and improvements\n- Enhanced performance and stability\n\n### 🔧 Installation\n1. Download the appropriate DMG for your Mac:\n   - Intel Mac (x64): `FlightAbove-${{ github.event.inputs.version }}.dmg`\n   - Apple Silicon: `FlightAbove-${{ github.event.inputs.version }}-arm64.dmg`\n2. Open the DMG file\n3. Drag FlightAbove to your Applications folder\n4. Launch from Applications\n\n### 📋 System Requirements\n- macOS 10.14 or later\n- Internet connection\n- 100MB free disk space\n\nFor complete documentation, see [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)",
               "draft": false,
               "prerelease": false
-            }'
+            }')
+          
+          # Extract release ID from response
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          echo "Created release with ID: $RELEASE_ID"
           
           # Upload DMG files
           for file in release/*.dmg; do
@@ -184,7 +192,7 @@ jobs:
                 -H "Accept: application/vnd.github.v3+json" \
                 -H "Content-Type: application/octet-stream" \
                 --data-binary "@$file" \
-                "https://uploads.github.com/repos/${{ github.repository }}/releases/v${{ github.event.inputs.version }}/assets?name=$filename"
+                "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$filename"
             fi
           done
       
