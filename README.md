@@ -100,3 +100,7 @@ If you enjoy FlightAbove, consider buying me a coffee:
 ---
 
 **Made with ❤️ for aviation enthusiasts worldwide**
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LouisXO/FlightAbove&type=Date)](https://www.star-history.com/#LouisXO/FlightAbove&Date)
