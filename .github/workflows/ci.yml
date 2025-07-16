@@ -41,35 +41,4 @@ jobs:
             echo "Build failed: dist directory not found"
             exit 1
           fi
-          echo "Build completed successfully"
-
-  build:
-    needs: test
-    runs-on: macos-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build application
-        run: npm run build
-      
-      - name: Package for macOS
-        run: npm run dist
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flightabove-builds
-          path: |
-            release/*.dmg
-            release/*.zip
-          retention-days: 30 
+          echo "Build completed successfully" 
