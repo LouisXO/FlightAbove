@@ -26,7 +26,11 @@ A modern macOS menu bar application that displays nearby aircraft with real-time
 ### For Users
 1. Download the latest release from [Releases](https://github.com/LouisXO/FlightAbove/releases)
 2. Open the DMG and drag to Applications
-3. Launch FlightAbove from your menu bar
+3. **If you see "FlightAbove Is Damaged" error**, run this command in Terminal:
+   ```bash
+   xattr -c /Applications/FlightAbove.app
+   ```
+4. Launch FlightAbove from your menu bar
 
 ### For Developers
 ```bash
@@ -71,6 +75,28 @@ npm run lint         # Run linting
 - **Backend**: Electron
 - **Build**: Vite
 - **APIs**: FlightRadar24, JetAPI
+
+## 🔧 Troubleshooting
+
+### "FlightAbove Is Damaged" Error
+If you see this error when trying to open the app:
+
+```
+"FlightAbove" is damaged and can't be opened. You should move it to the Trash.
+```
+
+**Solution**: Run this command in Terminal:
+```bash
+xattr -c /Applications/FlightAbove.app
+```
+
+This removes the quarantine attribute that macOS adds to unsigned apps downloaded from the internet.
+
+### Why This Happens
+- macOS Gatekeeper blocks unsigned apps by default
+- The app is not code-signed (no developer certificate)
+- This is normal for open-source Electron apps
+- The `xattr -c` command removes the quarantine flag
 
 ## 🤝 Contributing
 
