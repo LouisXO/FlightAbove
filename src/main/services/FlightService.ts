@@ -223,7 +223,12 @@ export class FlightService {
     // Sort by distance (closest first)
     const sortedFlights = flights.sort((a, b) => (a.distance || 0) - (b.distance || 0));
     console.log(`Demo mode: Generated ${sortedFlights.length} flights successfully`);
-    return sortedFlights;
+    
+    // Filter out flights with insufficient data (though demo flights should all have good data)
+    const filteredFlights = this.filterUnknownFlights(sortedFlights);
+    console.log(`Demo mode: After filtering unknown flights: ${filteredFlights.length} flights remaining`);
+    
+    return filteredFlights;
   }
 
   private generateRegistration(airlineCode: string): string {
@@ -342,7 +347,12 @@ export class FlightService {
         
         const flightDataArray = flightsWithDetails.map(flight => this.parseUnofficalAPIData(flight));
         console.log(`Parsed ${flightDataArray.length} flight data objects`);
-        return flightDataArray;
+        
+        // Filter out flights with insufficient data
+        const filteredFlights = this.filterUnknownFlights(flightDataArray);
+        console.log(`After filtering unknown flights: ${filteredFlights.length} flights remaining`);
+        
+        return filteredFlights;
       }
 
       return [];
@@ -695,6 +705,37 @@ export class FlightService {
       eta: eta,
       distance: flight.distance || 0
     };
+  }
+
+  private filterUnknownFlights(flights: FlightData[]): FlightData[] {
+    return flights.filter(flight => {
+      // Check if all important flight details are unknown
+      const isAirlineUnknown = flight.airline === 'Unknown Airline' || flight.airline === 'Unknown';
+      const isFlightNumberUnknown = flight.flightNumber === 'Unknown' || flight.flightNumber === flight.callsign;
+      const isOriginUnknown = flight.origin === 'Unknown';
+      const isDestinationUnknown = flight.destination === 'Unknown';
+      const isAircraftUnknown = flight.aircraft === 'Unknown' || flight.aircraftType === 'Unknown';
+      const isRegistrationUnknown = flight.registration === 'Unknown';
+      
+      // Count how many fields are unknown
+      const unknownFields = [
+        isAirlineUnknown,
+        isFlightNumberUnknown,
+        isOriginUnknown,
+        isDestinationUnknown,
+        isAircraftUnknown,
+        isRegistrationUnknown
+      ].filter(Boolean).length;
+      
+      // If 4 or more fields are unknown, consider it a flight with insufficient data
+      const hasInsufficientData = unknownFields >= 4;
+      
+      if (hasInsufficientData) {
+        console.log(`Filtering out flight with insufficient data: ${flight.callsign} (${unknownFields}/6 fields unknown)`);
+      }
+      
+      return !hasInsufficientData;
+    });
   }
 
   private getAirlineNameFromCode(airlineCode: string): string {
